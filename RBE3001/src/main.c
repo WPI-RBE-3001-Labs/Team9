@@ -7,36 +7,40 @@
 #include "RBELib/RBELib.h"
 #include "RBELib/timer.h"
 
+void blinkTest();
+
 int main(void){
 
+	blinkTest();
 
+	return 0;
 }
 
-void turnOnLED(){
+//void turnOnLED(){
+//	initRBELib();
+//	debugUSARTInit(115200);
+//	DDRB = 0xFF;
+//	while (1){
+//		PORTB = 0xFF;
+//		_delay_ms(500);
+//		PORTB = 0x00;
+//		_delay_ms(500);
+//	}
+//
+//}
+//void writeToSerial(){
+//	initRBELib();
+//	debugUSARTInit(115200);
+//	while (1){
+//		char c = getCharDebug();
+//		putCharDebug(c);
+//	}
+//}
+void blinkTest(){
 	initRBELib();
-	debugUSARTInit(115200);
-	DDRB = 0xFF;
-	while (1){
-		PORTB = 0xFF;
-		_delay_ms(500);
-		PORTB = 0x00;
-		_delay_ms(500);
-	}
+	//debugUSARTInit(115200);
 
-}
-void writeToSerial(){
-	initRBELib();
-	debugUSARTInit(115200);
-	while (1){
-		char c = getCharDebug();
-		putCharDebug(c);
-	}
-}
-void blink(){
-	initRBELib();
-	debugUSARTInit(115200);
-
-	initTimer(0, CTC, 100);
+	//initTimer(0, CTC, 100);
 
 	DDRBbits._P4 = OUTPUT;
 	while(1){
