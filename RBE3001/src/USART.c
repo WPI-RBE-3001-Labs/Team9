@@ -7,21 +7,23 @@
 
 
 #include "RBELib/RBELib.h"
-//#include <avr/io.h>
+#include <avr/io.h>
+#include "RBELIB/USARTDebug.h"
 
 void debugUSARTInit(unsigned long baudrate){
-  UBRR0H = (unsigned char)(baudrate >> 8);
-  UBRR0L = (unsigned char)(baudrate);
-  UCSR0B = (1 << RXEN0)|(1 << TXEN0);
-  UCSR0C = (1 << USBS0)|(3 << UCSZ00);
+	UBRR0H = (unsigned char)(baudrate >> 8);
+	UBRR0L = (unsigned char)(baudrate);
+	UCSR0B = (1 << RXEN0)|(1 << TXEN0);
+	UCSR0C = (1 << USBS0)|(3 << UCSZ00);
 }
 
 void putCharDebug(char byteToSend){
-	while (!(UCSR0A & (1 < UDRE)));
+	while (!(UCSR0A & (1 << UDRE0)));
 	UDR0 = byteToSend;
- 
+
 }
 
 unsigned char getCharDebug(void) {
-   return 'a';
+	while (!(UCSR0A * (1 << RXC0)));
+	return UDR0;
 }
