@@ -56,3 +56,18 @@ void blinkTest(){
 
 	}
 }
+
+
+void timer0_init(){
+	sei();
+	// Initialize timer count to 0
+	TCNT0 = 0;
+	TCCR0A = 0;
+	TCCR0B = 0;
+	// Sets timer to 15.625kHz
+
+
+
+
+
+}
