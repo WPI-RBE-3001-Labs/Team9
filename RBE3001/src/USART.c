@@ -11,19 +11,20 @@
 #include "RBELIB/USARTDebug.h"
 
 void debugUSARTInit(unsigned long baudrate){
-	UBRR0H = (unsigned char)(baudrate >> 8);
-	UBRR0L = (unsigned char)(baudrate);
-	UCSR0B = (1 << RXEN0)|(1 << TXEN0);
-	UCSR0C = (1 << USBS0)|(3 << UCSZ00);
+	UBRR1H = (F_CPU/(16*baudrate)-1) >> 8;
+	UBRR1L = (F_CPU/(16*baudrate)-1);
+	UCSR1B = (1 << RXEN1)|(1 << TXEN1);
+	UCSR1C = (1 << USBS1)|(3 << UCSZ10);
+
 }
 
 void putCharDebug(char byteToSend){
-	while (!(UCSR0A & (1 << UDRE0)));
-	UDR0 = byteToSend;
+	while (!(UCSR1A & (1 << UDRE1)));
+	UDR1 = byteToSend;
 
 }
 
 unsigned char getCharDebug(void) {
-	while (!(UCSR0A * (1 << RXC0)));
-	return UDR0;
+	while (!(UCSR1A * (1 << RXC1)));
+	return UDR1;
 }

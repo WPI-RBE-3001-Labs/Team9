@@ -33,9 +33,13 @@ void turnOnLED(){
 void writeToSerial(){
 	initRBELib();
 	debugUSARTInit(115200);
-	while (1)
+	while (1){
 		putCharDebug('a');
+		_delay_ms(500);
+	}
 }
+
+
 void blinkTest(){
 	initRBELib();
 	debugUSARTInit(115200);
