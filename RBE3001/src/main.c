@@ -31,7 +31,10 @@ void init_sc(){
 }
 
 void update_sc(){
-	if(!counter0%100)sc.sec++;
+	if(counter0>= 100){
+		sc.sec++;
+		counter0 = 0;
+	}
 	if(sc.sec>= 60){
 		sc.sec = 0;
 		sc.min++;
@@ -47,9 +50,9 @@ void update_sc(){
 
 // isr setup
 ISR(TIMER0_COMPA_vect) {
-	if (counter0 >= 65535||counter0 < 0){
-		counter0 = 0;
-	}
+//	if (counter0 >= 65535||counter0 < 0){
+//		counter0 = 0;
+//	}
 	counter0++; // increment our counter
 	update_sc();
 }
@@ -79,6 +82,7 @@ volatile char buf[50];
 void writeToSerial(){
 	initRBELib();
 	debugUSARTInit(115200);
+	init_sc();
 	timer0_init();
 	while (1){
 		int n = sprintf(buf,"%lu",(sc.sec));
@@ -97,7 +101,7 @@ void writeToSerial(){
 			putCharDebug(buf[i]);
 		putCharDebug('\n');
 		putCharDebug('\r');
-		_delay_ms(1000);
+		_delay_ms(500);
 	}
 }
 
@@ -128,7 +132,7 @@ void timer0_init(){
 	TCCR0A |= (1 << COM0A1); // Configure timer 0 for CTC mode
 
 	TCCR0B |= (1<<CS02) | (1<<CS00); // prescale by 1024 for 18kHz
-	OCR0A = 179; // divide by 18000 -1  to get 1 Hz count
+	OCR0A = 179; // divide by 180 -1  to get 100 Hz count
 
 	//counter0 = 0; // initialize timercount
 	TIMSK0 |= (1 << OCIE0A); // Enable CTC interrupt
