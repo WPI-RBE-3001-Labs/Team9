@@ -6,10 +6,53 @@
  */
 #include "RBELib/RBELib.h"
 #include "RBELib/timer.h"
+#include <avr/io.h>
+#include "RBELib/USARTDebug.h"
 
 void blinkTest();
 void writeToSerial();
 void turnOnLED();
+void timer0_init();
+
+volatile unsigned long counter0 = 0;
+
+typedef struct {
+	volatile unsigned int sec;
+	volatile unsigned int min;
+	volatile unsigned int hrs;
+} SimpleClock;
+
+SimpleClock sc;
+
+void init_sc(){
+	sc.sec = 0;
+	sc.min = 0;
+	sc.hrs = 0;
+}
+
+void update_sc(){
+	if(!counter0%100)sc.sec++;
+	if(sc.sec>= 60){
+		sc.sec = 0;
+		sc.min++;
+	}
+	if(sc.min>= 60){
+		sc.min = 0;
+		sc.hrs++;
+	}
+	if(sc.hrs >=24){
+		sc.hrs = 0;
+	}
+}
+
+// isr setup
+ISR(TIMER0_COMPA_vect) {
+	if (counter0 >= 65535||counter0 < 0){
+		counter0 = 0;
+	}
+	counter0++; // increment our counter
+	update_sc();
+}
 
 int main(void){
 
@@ -30,12 +73,31 @@ void turnOnLED(){
 	}
 
 }
+
+volatile char buf[50];
+
 void writeToSerial(){
 	initRBELib();
 	debugUSARTInit(115200);
+	timer0_init();
 	while (1){
-		putCharDebug('a');
-		_delay_ms(500);
+		int n = sprintf(buf,"%lu",(sc.sec));
+		if (n ==1) putCharDebug('0');
+		for(int i = 0; i < n; i++)
+			putCharDebug(buf[i]);
+		putCharDebug(':');
+		n = sprintf(buf,"%lu",(sc.min));
+		if (n ==1) putCharDebug('0');
+		for(int i = 0; i < n; i++)
+			putCharDebug(buf[i]);
+		putCharDebug(':');
+		n = sprintf(buf,"%lu",(sc.hrs));
+		if (n ==1) putCharDebug('0');
+		for(int i = 0; i < n; i++)
+			putCharDebug(buf[i]);
+		putCharDebug('\n');
+		putCharDebug('\r');
+		_delay_ms(1000);
 	}
 }
 
@@ -59,15 +121,16 @@ void blinkTest(){
 
 
 void timer0_init(){
-	sei();
+	//cli();
 	// Initialize timer count to 0
 	TCNT0 = 0;
-	TCCR0A = 0;
-	TCCR0B = 0;
-	// Sets timer to 15.625kHz
+	TCCR0A |= (1 << WGM01);// set to CTC mode
+	TCCR0A |= (1 << COM0A1); // Configure timer 0 for CTC mode
 
+	TCCR0B |= (1<<CS02) | (1<<CS00); // prescale by 1024 for 18kHz
+	OCR0A = 179; // divide by 18000 -1  to get 1 Hz count
 
-
-
-
+	//counter0 = 0; // initialize timercount
+	TIMSK0 |= (1 << OCIE0A); // Enable CTC interrupt
+	sei(); // Enable global interrupts
 }

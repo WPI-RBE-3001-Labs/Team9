@@ -8,7 +8,7 @@
 
 #include "RBELib/RBELib.h"
 #include <avr/io.h>
-#include "RBELIB/USARTDebug.h"
+#include "RBELib/USARTDebug.h"
 
 void debugUSARTInit(unsigned long baudrate){
 	UBRR1H = (F_CPU/(16*baudrate)-1) >> 8;
