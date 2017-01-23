@@ -13,6 +13,7 @@ void blinkTest();
 void writeToSerial();
 void turnOnLED();
 void timer0_init();
+void init_sc();
 
 volatile unsigned long counter0 = 0;
 
@@ -31,19 +32,18 @@ void init_sc(){
 }
 
 void update_sc(){
-	if(counter0>= 100){
+	if((counter0 % 100) == 0){
 		sc.sec++;
-		counter0 = 0;
 	}
-	if(sc.sec>= 60){
+	if(sc.sec >= 59){
 		sc.sec = 0;
 		sc.min++;
 	}
-	if(sc.min>= 60){
+	if(sc.min>= 59){
 		sc.min = 0;
 		sc.hrs++;
 	}
-	if(sc.hrs >=24){
+	if(sc.hrs >=23){
 		sc.hrs = 0;
 	}
 }
@@ -58,7 +58,7 @@ ISR(TIMER0_COMPA_vect) {
 }
 
 int main(void){
-
+	init_sc();
 	writeToSerial();
 
 	return 0;
@@ -82,20 +82,19 @@ volatile char buf[50];
 void writeToSerial(){
 	initRBELib();
 	debugUSARTInit(115200);
-	init_sc();
 	timer0_init();
 	while (1){
-		int n = sprintf(buf,"%lu",(sc.sec));
+		int n = sprintf(buf,"%d",(sc.sec));
 		if (n ==1) putCharDebug('0');
 		for(int i = 0; i < n; i++)
 			putCharDebug(buf[i]);
 		putCharDebug(':');
-		n = sprintf(buf,"%lu",(sc.min));
+		n = sprintf(buf,"%d",(sc.min));
 		if (n ==1) putCharDebug('0');
 		for(int i = 0; i < n; i++)
 			putCharDebug(buf[i]);
 		putCharDebug(':');
-		n = sprintf(buf,"%lu",(sc.hrs));
+		n = sprintf(buf,"%d",(sc.hrs));
 		if (n ==1) putCharDebug('0');
 		for(int i = 0; i < n; i++)
 			putCharDebug(buf[i]);
