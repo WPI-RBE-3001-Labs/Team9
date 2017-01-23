@@ -60,9 +60,12 @@ ISR(TIMER0_COMPA_vect) {
 }
 
 int main(void){
-	init_sc();
-	writeToSerial();
 
+	int channel = 1;
+	init_sc();
+	initADC(channel);
+
+	writeToSerial();
 	return 0;
 }
 
@@ -104,20 +107,20 @@ void printToSerial(char data[]){
 }
 
 void blinkTest(){
-//	initRBELib();
-//	debugUSARTInit(115200);
-//
-//	//initTimer(0, CTC, 100);
-//
-//	DDRBbits._P4 = OUTPUT;
-//	while(1){
-//		PINBbits._P4 = 0;
-//		_delay_ms(100);
-//		PINBbits._P4 = 1;
-//		_delay_ms(100);
-//
-//
-//	}
+	initRBELib();
+	debugUSARTInit(115200);
+
+	//initTimer(0, CTC, 100);
+
+	DDRBbits._P4 = OUTPUT;
+	while(1){
+		PINBbits._P4 = 0;
+		_delay_ms(100);
+		PINBbits._P4 = 1;
+		_delay_ms(100);
+
+
+	}
 }
 
 
@@ -135,3 +138,5 @@ void timer0_init(){
 	TIMSK0 |= (1 << OCIE0A); // Enable CTC interrupt
 	sei(); // Enable global interrupts
 }
+
+

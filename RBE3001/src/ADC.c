@@ -7,15 +7,16 @@
 
 #include "RBELib/RBELib.h"
 #include <avr/io.h>
+#include "RBELib/USARTDebug.h"
 
-void init_ADC(char channel)
+void initADC(int channel)
 {
 	//specify 128kHz sample rate using internal divider
 	ADCSRA |= (1 << ADPS2)| (1<<ADPS1)| (1<<ADPS0);
 
 	ADMUX |= 1 << REFS0; //set 5V reference voltage
 
-	ADMUX &= 0xFB; //clear ADC
+	ADMUX &= 0x80; // clear channel select
 	ADMUX |= channel; //set multiplexer value
 
 	ADCSRA |= 1 << ADATE; //set auto trigger for source selection (intrpt flag)
@@ -24,17 +25,26 @@ void init_ADC(char channel)
 	ADCSRA |= 1 <<ADEN; //enable ADC
 	ADCSRA |= 1 <<ADIE; //enable ADC interrupts
 	sei();
-	ADCSRA |= 1<<ADSC;
+	//ADCSRA |= 1<<ADSC;
 }
 
 //ISR(ADC_vect){
 //
 //}
 
-void getVal(char channel)
+unsigned short getADC(int channel)
 {
+	// Channel select
 	ADMUX &= 0b11100000;
 	ADMUX |= channel;
+
+	// Start conversion
+	ADCSRA |= 1<<ADSC;
+
+	while(ADCSRA & (1<<ADSC)){
+		return ADCH;
+	}
+
 }
 
 void clear(char channel)
