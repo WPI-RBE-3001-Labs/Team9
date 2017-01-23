@@ -8,12 +8,14 @@
 #include "RBELib/timer.h"
 #include <avr/io.h>
 #include "RBELib/USARTDebug.h"
+#include <string.h>
 
 void blinkTest();
 void writeToSerial();
 void turnOnLED();
 void timer0_init();
 void init_sc();
+void printToSerial(char data[]);
 
 volatile unsigned long counter0 = 0;
 
@@ -84,42 +86,38 @@ void writeToSerial(){
 	debugUSARTInit(115200);
 	timer0_init();
 	while (1){
-		int n = sprintf(buf,"%d",(sc.sec));
-		if (n ==1) putCharDebug('0');
-		for(int i = 0; i < n; i++)
-			putCharDebug(buf[i]);
-		putCharDebug(':');
-		n = sprintf(buf,"%d",(sc.min));
-		if (n ==1) putCharDebug('0');
-		for(int i = 0; i < n; i++)
-			putCharDebug(buf[i]);
-		putCharDebug(':');
-		n = sprintf(buf,"%d",(sc.hrs));
-		if (n ==1) putCharDebug('0');
-		for(int i = 0; i < n; i++)
-			putCharDebug(buf[i]);
-		putCharDebug('\n');
-		putCharDebug('\r');
+		sprintf(buf,"%02d:%02d:%02d", (sc.hrs), (sc.min), (sc.sec));
+		printToSerial(buf);
 		_delay_ms(500);
 	}
 }
 
 
-void blinkTest(){
-	initRBELib();
-	debugUSARTInit(115200);
-
-	//initTimer(0, CTC, 100);
-
-	DDRBbits._P4 = OUTPUT;
-	while(1){
-		PINBbits._P4 = 0;
-		_delay_ms(100);
-		PINBbits._P4 = 1;
-		_delay_ms(100);
-
-
+void printToSerial(char data[]){
+	int i;
+	for(i = 0; i<strlen(data); i++){
+		putCharDebug(data[i]);
 	}
+	putCharDebug('\n');
+	putCharDebug('\r');
+
+}
+
+void blinkTest(){
+//	initRBELib();
+//	debugUSARTInit(115200);
+//
+//	//initTimer(0, CTC, 100);
+//
+//	DDRBbits._P4 = OUTPUT;
+//	while(1){
+//		PINBbits._P4 = 0;
+//		_delay_ms(100);
+//		PINBbits._P4 = 1;
+//		_delay_ms(100);
+//
+//
+//	}
 }
 
 
