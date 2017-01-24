@@ -8,7 +8,7 @@
 #include "RBELib/RBELib.h"
 #include <avr/io.h>
 #include "RBELib/USARTDebug.h"
-#include "ADC.h"
+#include "RBELib/ADC.h"
 
 void initADC(int channel)
 {
@@ -37,7 +37,7 @@ void initADC(int channel)
 //
 //}
 
-unsigned short getADCval(int channel)
+unsigned short getADC(int channel)
 {
 	// Channel select
 	ADMUX &= 0b11100000;
@@ -52,7 +52,7 @@ unsigned short getADCval(int channel)
 }
 
 
-void clear(char channel)
+void clearADC(int channel)
 {
 //	DDRA |= (1 << channel);
 
@@ -66,3 +66,5 @@ void clear(char channel)
 	ADCL = 0;
 	ADC = 0;
 }
+
+void changeADC(int channel){};

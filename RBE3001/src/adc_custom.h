@@ -5,12 +5,12 @@
  *      Author: kacper
  */
 
-#ifndef ADC_H_
-#define ADC_H_
+#ifndef ADC_CUSTOM_H_
+#define ADC_CUSTOM_H_
 
 void initADC(int channel);
 unsigned long getADCval(int channel);
 void clear(char channel);
 
 
-#endif /* ADC_H_ */
+#endif /* ADC_CUSTOM_H_ */

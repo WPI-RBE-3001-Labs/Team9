@@ -6,6 +6,7 @@
  */
 #include "RBELib/RBELib.h"
 #include "RBELib/timer.h"
+#include "RBELib/ADC.h"
 #include <avr/io.h>
 #include "RBELib/USARTDebug.h"
 #include <string.h>
@@ -17,6 +18,8 @@ void turnOnLED();
 void timer0_init();
 void init_sc();
 void printToSerial(char data[]);
+
+volatile char buf[50];
 
 volatile unsigned long counter0 = 0;
 
@@ -61,10 +64,16 @@ ISR(TIMER0_COMPA_vect) {
 }
 
 int main(void){
-
-	int channel = 0;
+	initRBELib();
+	debugUSARTInit(115200);
+	int channel = 7;
 	init_sc();
 	initADC(channel);
+	while(1){
+		unsigned short adc_val = getADC(channel);
+		sprintf(buf, "%d", adc_val);
+		printToSerial(buf);
+	}
 
 	writeToSerial();
 	return 0;
@@ -83,20 +92,16 @@ void turnOnLED(){
 
 }
 
-volatile char buf[50];
+
 
 void writeToSerial(){
-	initRBELib();
-	debugUSARTInit(115200);
+
 	timer0_init();
 	volatile unsigned short adcval = 0;
-	while (1){
-
-		sprintf(buf,"%02d:%02d:%02d;%08u", (sc.hrs), (sc.min), (sc.sec), adcval);
-		adcval = getADCval(4);
-		printToSerial(buf);
-		_delay_ms(500);
-	}
+	sprintf(buf,"%02d:%02d:%02d;%08u", (sc.hrs), (sc.min), (sc.sec), adcval);
+	//adcval = getADCval(4);
+	printToSerial(buf);
+	_delay_ms(500);
 }
 
 
