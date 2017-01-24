@@ -119,7 +119,6 @@ void blinkTest(){
 		PINBbits._P4 = 1;
 		_delay_ms(100);
 
-
 	}
 }
 
