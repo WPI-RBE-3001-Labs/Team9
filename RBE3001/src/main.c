@@ -9,6 +9,7 @@
 #include <avr/io.h>
 #include "RBELib/USARTDebug.h"
 #include <string.h>
+#include "main.h"
 
 void blinkTest();
 void writeToSerial();
@@ -52,16 +53,16 @@ void update_sc(){
 
 // isr setup
 ISR(TIMER0_COMPA_vect) {
-//	if (counter0 >= 65535||counter0 < 0){
-//		counter0 = 0;
-//	}
+	if (counter0 >= 65535||counter0 < 0){
+		counter0 = 0;
+	}
 	counter0++; // increment our counter
 	update_sc();
 }
 
 int main(void){
 
-	int channel = 1;
+	int channel = 0;
 	init_sc();
 	initADC(channel);
 
@@ -88,8 +89,11 @@ void writeToSerial(){
 	initRBELib();
 	debugUSARTInit(115200);
 	timer0_init();
+	volatile unsigned short adcval = 0;
 	while (1){
-		sprintf(buf,"%02d:%02d:%02d", (sc.hrs), (sc.min), (sc.sec));
+
+		sprintf(buf,"%02d:%02d:%02d;%08u", (sc.hrs), (sc.min), (sc.sec), adcval);
+		adcval = getADCval(4);
 		printToSerial(buf);
 		_delay_ms(500);
 	}
