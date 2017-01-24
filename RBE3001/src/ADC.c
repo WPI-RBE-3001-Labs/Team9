@@ -24,7 +24,7 @@ void initADC(int channel)
 	ADMUX |= channel; //set multiplexer value
 
 	//ADCSRA |= 1 << ADATE; //set auto trigger for source selection (intrpt flag)
-	ADCSRB &= ~((1<<ADTS2)|(1<<ADTS1)|(1<<ADTS0)); // free running
+	ADCSRB &= ~((1<<ADTS2)|(1<<ADTS1)|(1<<ADTS0)); // set free running mode
 
 	ADCSRA |= 1 <<ADEN; //enable ADC
 //	ADCSRA |= 1 <<ADIE; //enable ADC interrupts

@@ -57,7 +57,6 @@ ISR(TIMER0_COMPA_vect) {
 		counter0 = 0;
 	}
 	counter0++; // increment our counter
-	update_sc();
 }
 
 int main(void){
@@ -91,9 +90,9 @@ void writeToSerial(){
 	timer0_init();
 	volatile unsigned short adcval = 0;
 	while (1){
-
-		sprintf(buf,"%02d:%02d:%02d;%08u", (sc.hrs), (sc.min), (sc.sec), adcval);
+		update_sc();
 		adcval = getADCval(4);
+		sprintf(buf,"%02d:%02d:%02d;%08u", (sc.hrs), (sc.min), (sc.sec), adcval);
 		printToSerial(buf);
 		_delay_ms(500);
 	}
@@ -127,6 +126,11 @@ void blinkTest(){
 	}
 }
 
+void sig_gen(int internalDiv, int dutyCylce){
+	((counter0 % (1/internalDiv)) == 0){
+
+	}
+}
 
 void timer0_init(){
 	//cli();
@@ -136,10 +140,24 @@ void timer0_init(){
 	TCCR0A |= (1 << COM0A1); // Configure timer 0 for CTC mode
 
 	TCCR0B |= (1<<CS02) | (1<<CS00); // prescale by 1024 for 18kHz
-	OCR0A = 179; // divide by 180 -1  to get 100 Hz count
+	OCR0A = 179; // divide by 180 -1  to get 100 Hz counter
 
 	//counter0 = 0; // initialize timercount
 	TIMSK0 |= (1 << OCIE0A); // Enable CTC interrupt
+	sei(); // Enable global interrupts
+}
+
+void timer1_init()
+{
+	TCNT1 = 0;
+	TCCR1A |= (1 << WGM01);// set to CTC mode
+	TCCR1A |= (1 << COM0A1); // Configure timer 1 for CTC mode
+
+	TCCR1B |= (1<<CS11) | (1<<CS10); // prescale by 64 for 288kHz
+	OCR1A = 287; // divide by 18 -1  to get 100 kHz counter
+
+	//counter0 = 0; // initialize timercount
+	TIMSK1 |= (1 << OCIE1A); // Enable CTC interrupt
 	sei(); // Enable global interrupts
 }
 
