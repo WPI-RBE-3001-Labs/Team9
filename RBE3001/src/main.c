@@ -12,9 +12,7 @@
 #include <string.h>
 #include "main.h"
 
-void blinkTest();
 void writeToSerial();
-void turnOnLED();
 void timer0_init();
 void timer1_init();
 void init_sc();
@@ -82,52 +80,37 @@ int main(void){
 
 	debugUSARTInit(115200);
 
+	/** TRY RUNNING THIS ON THE OSCILLOSCOPE */
 
-	DDRAbits._P5 = OUTPUT;
-	PORTD |= 0x00;
+	DDRBbits._P4 = OUTPUT;
+	PORTD &= ~0X07;
 	DDRD &= 0x00;
 
-	timer1_init();
+	//timer1_init();
 	//volatile unsigned long last = 0;
+	sprintf(buf, "---------------");
+	printToSerial(buf);
+	PINBbits._P4 = 1;
+	_delay_ms(100); //Delay .1 sec
+	sprintf(buf, "%d", PINBbits._P4);
+	printToSerial(buf);
+	PINBbits._P4 = 0;
+	_delay_ms(100);
+	sprintf(buf, "%d", PINBbits._P4);
+	printToSerial(buf);
+
+	/*
 	while(1){
-		//sprintf(buf, "%d", PINAbits._P5);
+		sprintf(buf, "%d", PINBbits._P4);
 		//sqWave(0.5);
-		PINAbits._P5 = 1;
-		sprintf(buf, "%d,%d,%d", PIND&1, (PIND&2) >> 1, (PIND&4) >> 2);
+		//sprintf(buf, "%d,%d,%d", PIND&1, (PIND&2) >> 1, (PIND&4) >> 2);
 		//last = counter1;
 		printToSerial(buf);
-		//_delay_ms(500);
+//		PINBbits._P4 = 0;
 	}
-
-	//	int channel = 7;
-	//	init_sc();
-	//	initADC(channel);
-	//	while(1){
-	//		unsigned short adc_val = getADC(channel);
-	//		sprintf(buf, "%d", adc_val);
-	//		printToSerial(buf);
-	//	}
-	//
-	//	writeToSerial();
-	//	return 0;
-
-	//readPot();
+	 */
 	return 0;
 }
-
-void turnOnLED(){
-	initRBELib();
-	debugUSARTInit(115200);
-	DDRB = 0xFF;
-	while (1){
-		PORTB = 0xFF;
-		_delay_ms(500);
-		PORTB = 0x00;
-		_delay_ms(500);
-	}
-
-}
-
 
 void writeToSerial(){
 
@@ -146,22 +129,6 @@ void printToSerial(char data[]){
 	putCharDebug('\n');
 	putCharDebug('\r');
 
-}
-
-void blinkTest(){
-	initRBELib();
-	debugUSARTInit(115200);
-
-	//initTimer(0, CTC, 100);
-
-	DDRBbits._P4 = OUTPUT;
-	while(1){
-		PINBbits._P4 = 0;
-		_delay_ms(100);
-		PINBbits._P4 = 1;
-		_delay_ms(100);
-
-	}
 }
 
 
@@ -214,10 +181,10 @@ void readPot(){
 
 void sqWave(float dc){
 	if(counter1  < freq_div*dc){
-		PINAbits._P5 = 1;
+		PINBbits._P4 = 1;
 	}
 	else{
-		PINAbits._P5 = 0;
+		PINBbits._P4 = 0;
 	}
 }
 
