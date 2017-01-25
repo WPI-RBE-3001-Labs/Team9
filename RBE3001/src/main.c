@@ -93,7 +93,7 @@ int main(void){
 		//sprintf(buf, "%d", PINAbits._P5);
 		//sqWave(0.5);
 		PINAbits._P5 = 1;
-		sprintf(buf, "%d,%d,%d", PIND&1, PIND&2, PIND&4);
+		sprintf(buf, "%d,%d,%d", PIND&1, (PIND&2) >> 1, (PIND&4) >> 2);
 		//last = counter1;
 		printToSerial(buf);
 		//_delay_ms(500);
