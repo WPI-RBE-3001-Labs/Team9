@@ -23,9 +23,16 @@ void initFreqPin();
 void buttonSM();
 
 volatile char buf[50];
+volatile unsigned short adcdatas[225];
+volatile unsigned short timedatas[225];
 
 volatile unsigned long counter0 = 0;
 volatile unsigned long counter1 = 0;
+volatile unsigned char timer_started = 0;
+volatile char data_counter = 0;
+volatile char data_done = 0;
+int channel = 7;
+unsigned short adc_val2;
 int freq_div = 100;
 
 typedef struct {
@@ -43,7 +50,7 @@ void init_sc(){
 }
 
 void update_sc(){
-	if((counter0 % 100) == 0){
+	if((counter0 % 225) == 0){
 		sc.sec++;
 	}
 	if(sc.sec >= 59){
@@ -59,25 +66,6 @@ void update_sc(){
 	}
 }
 
-// isr setup
-ISR(TIMER0_COMPA_vect) {
-	if (counter0 >= 65535||counter0 < 0){
-		counter0 = 0;
-	}
-	counter0++; // increment our counter
-	update_sc();
-}
-
-ISR(TIMER2_COMPA_vect) {
-	if (counter1 >= freq_div||counter1 < 0){
-		counter1 = 0;
-	}
-	counter1++; // increment our counter
-}
-
-ISR(ADC_vect){
-
-}
 
 int main(void){
 	initRBELib();
@@ -86,13 +74,13 @@ int main(void){
 
 	/** TRY RUNNING THIS ON THE OSCILLOSCOPE */
 
-
 	//DDRBbits._P4 = OUTPUT;
 	DDRB |= (1 << PB4);
 	DDRD &= ~((1<<DDD5)|(1<<DDD6)|(1<<DDD7));
 	PORTD |= ((1<<PD5)|(1<<PD6)|(1<<PD7));
 
-
+//ollectADC();
+//eadPot();
 	//volatile unsigned long last = 0;
 	//	sprintf(buf, "---------------");
 	//	printToSerial(buf);
@@ -105,7 +93,15 @@ int main(void){
 	//	_delay_ms(100);
 	//	sprintf(buf, "%d", PINBbits._P4);
 	//	printToSerial(buf);
-
+//	ADCtimer_init();
+//	volatile unsigned long last = 0;
+//	while(1){
+//		sprintf(buf,"%u",counter0-last);
+//		last = counter0;
+//		printToSerial(buf);
+//
+//		_delay_ms(1000);
+//	}
 	buttonSM();
 //	timer2_init();
 //		while(1){
@@ -113,6 +109,34 @@ int main(void){
 //		}
 
 	return 0;
+}
+
+void collectADC()
+{
+	DDRD &= ~((1<<DDD4));
+	PORTD |= ((1<<PD4));
+	initADC(channel);
+	while((PIND>>PD4)&1 == 1){
+		_delay_ms(5);
+	}
+	timer2_init();
+	ADCtimer_init();
+	volatile unsigned long last = counter0;
+
+	while(counter0 < 225){
+		if(counter0 > last){
+			adcdatas[last] = getADC(channel);
+			timedatas[last] = counter0;
+			last = counter0;
+		}
+	}
+	sprintf(buf, "---------------");
+	printToSerial(buf);
+	for(int i = 0; i < 225; i++){
+		sprintf(buf,"%02d, %02d", timedatas[i], adcdatas[i]);
+		printToSerial(buf);
+	}
+
 }
 
 void writeToSerial(){
@@ -136,10 +160,9 @@ void printToSerial(char data[]){
 
 void buttonSM() {
 	char state = 0;
-	int channel = 7;
 	init_sc();
 	initADC(channel);
-	timer0_init();
+//	timer0_init();
 	timer2_init();
 	while(1)
 	{
@@ -177,44 +200,15 @@ void buttonSM() {
 		int output = 0;
 		if(counter1  < (int) freq_div*dc)
 			output = 1;
-//		sprintf(buf, "%.2f, %d, %d, %d",
-//				dc, freq, output, adc_val);
-//		printToSerial(buf);
+		sprintf(buf, "%.2f, %d, %d, %d",
+				dc, freq, output, adc_val);
+		printToSerial(buf);
 	}
 
 }
-void timer0_init(){
-	//cli();
-	// Initialize timer count to 0
-	TCNT0 = 0;
-	TCCR0A |= (1 << WGM01);// set to CTC mode
-	TCCR0A |= (1 << COM0A1); // Configure timer 0 for CTC mode
 
-	TCCR0B |= (1<<CS02) | (1<<CS00); // prescale by 1024 for 18kHz
-	OCR0A = 179; // divide by 180 -1  to get 100 Hz count
-
-	//counter0 = 0; // initialize timercount
-	TIMSK0 |= (1 << OCIE0A); // Enable CTC interrupt
-	sei(); // Enable global interrupts
-}
-
-void timer2_init(){
-	TCNT2 = 0;
-	TCCR2A |= (1 << WGM21);// set to CTC mode
-	TCCR2A |= (1 << COM2A1); // Configure timer 0 for CTC mode
-
-	TCCR2B |= (1<<CS22) | (1<<CS20); // prescale by 1024 for 18kHz
-	OCR2A = 14; // divide by 180 -1  to get 100 Hz count
-
-	// 145/256 = 1k/x => x = 256k/145
-	//counter0 = 0; // initialize timercount
-	TIMSK2 |= (1 << OCIE2A); // Enable CTC interrupt
-	//TIMSK1 |= (1 << TOIE1); // Enable CTC interrupt
-	sei(); // Enable global interrupts
-}
 
 void readPot(){
-	int channel = 7;
 	init_sc();
 	initADC(channel);
 	timer0_init();
@@ -242,4 +236,104 @@ void sqWave(float dc){
 
 void initFreqPin(){
 	DDRAbits._P5 = OUTPUT;
+}
+
+// isr setup
+ISR(TIMER0_COMPA_vect) {
+	if (counter0 >= 65535||counter0 < 0){
+		counter0 = 0;
+	}
+	counter0++; // increment our counter
+	update_sc();
+}
+
+//ISR(TIMER0_COMPA_vect) {
+//	adc_val2 = getADC(channel);
+//	if(timer_started == 1)
+//	{
+//		adcdatas[data_counter] = adc_val2;
+//		data_counter++;
+//	}
+//
+//	if(data_counter >= 225){
+//		data_done = 1;
+//	}
+//}
+
+//ISR(TIMER2_COMPA_vect) {
+//	if (counter0 >= 65535||counter0 < 0){
+//			counter0 = 0;
+//	}
+//	counter0++; // increment our counter
+//	update_sc();
+//
+//	if (counter1 >= freq_div||counter1 < 0){
+//		counter1 = 0;
+//	}
+//	counter1++; // increment our counter
+//}
+
+ISR(TIMER2_COMPA_vect) {
+	if (counter1 >= freq_div||counter1 < 0){
+			counter1 = 0;
+	}
+	counter1++; // increment our counter
+}
+
+//ISR(TIMER1_COMPA_vect) {
+//	if (counter1 >= freq_div||counter1 < 0){
+//		counter1 = 0;
+//	}
+//	counter1++; // increment our counter
+//}
+
+
+ISR(ADC_vect){
+	adc_val2 = ADCH;
+}
+
+
+void timer0_init(){
+	//cli();
+	// Initialize timer count to 0
+	TCNT0 = 0;
+	TCCR0A |= (1 << WGM01);// set to CTC mode
+	TCCR0A |= (1 << COM0A1); // Configure timer 0 for CTC mode
+
+	TCCR0B |= (1<<CS02) | (1<<CS00); // prescale by 1024 for 18kHz
+	OCR0A = 179; // divide by 180 -1  to get 100 Hz count
+
+	//counter0 = 0; // initialize timercount
+	TIMSK0 |= (1 << OCIE0A); // Enable CTC interrupt
+	sei(); // Enable global interrupts
+}
+
+void ADCtimer_init(){
+	//cli();
+	// Initialize timer count to 0
+	TCNT0 = 0;
+	TCCR0A |= (1 << WGM01);// set to CTC mode
+	TCCR0A |= (1 << COM0A1); // Configure timer 0 for CTC mode
+
+	TCCR0B |= (1<<CS02) | (1<<CS00); // prescale by 1024 for 18kHz
+	OCR0A = 79; // divide by 180 -1  to get 100 Hz count
+
+	//counter0 = 0; // initialize timercount
+	TIMSK0 |= (1 << OCIE0A); // Enable CTC interrupt
+	sei(); // Enable global interrupts
+}
+
+void timer2_init(){
+	TCNT2 = 0;
+	TCCR2A |= (1 << WGM21);// set to CTC mode
+	TCCR2A |= (1 << COM2A1); // Configure timer 0 for CTC mode
+
+	TCCR2B |= (1<<CS22) | (1<<CS20);
+	OCR2A = 14; // divide by 15-1  to get 10kHz count
+
+	// 145/256 = 1k/x => x = 256k/145
+	//counter0 = 0; // initialize timercount
+	TIMSK2 |= (1 << OCIE2A); // Enable CTC interrupt
+	//TIMSK1 |= (1 << TOIE1); // Enable CTC interrupt
+	sei(); // Enable global interrupts
 }
