@@ -14,19 +14,19 @@
 
 void writeToSerial();
 void timer0_init();
-void timer1_init();
+void timer2_init();
 void init_sc();
 void printToSerial(char data[]);
 void readPot();
 void sqWave(float dc);
 void initFreqPin();
-
+void buttonSM();
 
 volatile char buf[50];
 
 volatile unsigned long counter0 = 0;
 volatile unsigned long counter1 = 0;
-int freq_div = 1000;
+int freq_div = 100;
 
 typedef struct {
 	volatile unsigned int sec;
@@ -75,6 +75,10 @@ ISR(TIMER2_COMPA_vect) {
 	counter1++; // increment our counter
 }
 
+ISR(ADC_vect){
+
+}
+
 int main(void){
 	initRBELib();
 
@@ -82,33 +86,32 @@ int main(void){
 
 	/** TRY RUNNING THIS ON THE OSCILLOSCOPE */
 
-	DDRBbits._P4 = OUTPUT;
-	PORTD &= ~0X07;
-	DDRD &= 0x00;
 
-	//timer1_init();
+	//DDRBbits._P4 = OUTPUT;
+	DDRB |= (1 << PB4);
+	DDRD &= ~((1<<DDD5)|(1<<DDD6)|(1<<DDD7));
+	PORTD |= ((1<<PD5)|(1<<PD6)|(1<<PD7));
+
+
 	//volatile unsigned long last = 0;
-	sprintf(buf, "---------------");
-	printToSerial(buf);
-	PINBbits._P4 = 1;
-	_delay_ms(100); //Delay .1 sec
-	sprintf(buf, "%d", PINBbits._P4);
-	printToSerial(buf);
-	PINBbits._P4 = 0;
-	_delay_ms(100);
-	sprintf(buf, "%d", PINBbits._P4);
-	printToSerial(buf);
+	//	sprintf(buf, "---------------");
+	//	printToSerial(buf);
+	//	//PINBbits._P4 = 1;
+	//	PORTB |= (1 << PB4);
+	//	_delay_ms(100); //Delay .1 sec
+	//	sprintf(buf, "%d", PINBbits._P4);
+	//	printToSerial(buf);
+	//	PORTB &= ~(1 << PB4);
+	//	_delay_ms(100);
+	//	sprintf(buf, "%d", PINBbits._P4);
+	//	printToSerial(buf);
 
-	/*
-	while(1){
-		sprintf(buf, "%d", PINBbits._P4);
-		//sqWave(0.5);
-		//sprintf(buf, "%d,%d,%d", PIND&1, (PIND&2) >> 1, (PIND&4) >> 2);
-		//last = counter1;
-		printToSerial(buf);
-//		PINBbits._P4 = 0;
-	}
-	 */
+	buttonSM();
+//	timer2_init();
+//		while(1){
+//			sqWave(0.5);
+//		}
+
 	return 0;
 }
 
@@ -131,7 +134,55 @@ void printToSerial(char data[]){
 
 }
 
+void buttonSM() {
+	char state = 0;
+	int channel = 7;
+	init_sc();
+	initADC(channel);
+	timer0_init();
+	timer2_init();
+	while(1)
+	{
+		unsigned short adc_val = getADC(channel);
+		int button1 = (PIND>>PD5)&1;
+		int button2 = (PIND>>PD6)&1;
+		int button3 = (PIND>>PD7)&1;
+		float dc = adc_val/1023.0;
+		if( ((button1)==0) && ((button2)==1) &&((button3)==1) ){
+			state = 1;
+		}
+		if( ((button2)==0) && ((button1)==1) &&((button3)==1) ){
+			state = 2;
+		}
+		if( ((button3)==0) && ((button1)==1) &&((button2)==1) ){
+			state = 3;
+		}
 
+
+		switch(state){
+		case 1:
+			freq_div = 10000;
+			break;
+		case 2:
+			freq_div = 500;
+			break;
+		case 3:
+			freq_div = 100;
+			break;
+		default:
+			freq_div = 1000;
+		}
+		sqWave(dc);
+		int freq = 10000/freq_div;
+		int output = 0;
+		if(counter1  < (int) freq_div*dc)
+			output = 1;
+//		sprintf(buf, "%.2f, %d, %d, %d",
+//				dc, freq, output, adc_val);
+//		printToSerial(buf);
+	}
+
+}
 void timer0_init(){
 	//cli();
 	// Initialize timer count to 0
@@ -147,13 +198,13 @@ void timer0_init(){
 	sei(); // Enable global interrupts
 }
 
-void timer1_init(){
+void timer2_init(){
 	TCNT2 = 0;
 	TCCR2A |= (1 << WGM21);// set to CTC mode
 	TCCR2A |= (1 << COM2A1); // Configure timer 0 for CTC mode
 
 	TCCR2B |= (1<<CS22) | (1<<CS20); // prescale by 1024 for 18kHz
-	OCR2A = 144; // divide by 180 -1  to get 100 Hz count
+	OCR2A = 14; // divide by 180 -1  to get 100 Hz count
 
 	// 145/256 = 1k/x => x = 256k/145
 	//counter0 = 0; // initialize timercount
@@ -170,8 +221,8 @@ void readPot(){
 	while(1){
 		unsigned short adc_val = getADC(channel);
 		printToSerial(buf);
-		float mv = adc_val/1024.0 *5.0;
-		float angle = adc_val/1024.0 *270;
+		float mv = adc_val/1023.0 *5.0;
+		float angle = adc_val/1023.0 *270;
 		sprintf(buf,"%02d:%02d:%02d, %u, %.2f, %.2f",
 				(sc.hrs), (sc.min), (sc.sec),adc_val, mv, angle);
 		printToSerial(buf);
@@ -180,11 +231,12 @@ void readPot(){
 }
 
 void sqWave(float dc){
-	if(counter1  < freq_div*dc){
-		PINBbits._P4 = 1;
+	if(dc > 1.0) dc = 1.0;
+	if(counter1  < (int) freq_div*dc){
+		PORTB |= (1 << PB4);
 	}
 	else{
-		PINBbits._P4 = 0;
+		PORTB &= ~(1 << PB4);
 	}
 }
 
