@@ -84,6 +84,8 @@ int main(void){
 
 
 	DDRAbits._P5 = OUTPUT;
+	PORTD |= 0x00;
+	DDRD &= 0x00;
 
 	timer1_init();
 	//volatile unsigned long last = 0;
@@ -91,8 +93,9 @@ int main(void){
 		//sprintf(buf, "%d", PINAbits._P5);
 		//sqWave(0.5);
 		PINAbits._P5 = 1;
+		sprintf(buf, "%d,%d,%d", PIND&1, PIND&2, PIND&4);
 		//last = counter1;
-		//printToSerial(buf);
+		printToSerial(buf);
 		//_delay_ms(500);
 	}
 
