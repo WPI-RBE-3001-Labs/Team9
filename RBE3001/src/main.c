@@ -6,19 +6,27 @@
  */
 #include "RBELib/RBELib.h"
 #include "RBELib/timer.h"
+#include "RBELib/ADC.h"
 #include <avr/io.h>
 #include "RBELib/USARTDebug.h"
 #include <string.h>
 #include "main.h"
 
-void blinkTest();
 void writeToSerial();
-void turnOnLED();
 void timer0_init();
+void timer1_init();
 void init_sc();
 void printToSerial(char data[]);
+void readPot();
+void sqWave(float dc);
+void initFreqPin();
+
+
+volatile char buf[50];
 
 volatile unsigned long counter0 = 0;
+volatile unsigned long counter1 = 0;
+int freq_div = 1000;
 
 typedef struct {
 	volatile unsigned int sec;
@@ -57,45 +65,59 @@ ISR(TIMER0_COMPA_vect) {
 		counter0 = 0;
 	}
 	counter0++; // increment our counter
+	update_sc();
+}
+
+ISR(TIMER2_COMPA_vect) {
+	if (counter1 >= freq_div||counter1 < 0){
+		counter1 = 0;
+	}
+	counter1++; // increment our counter
 }
 
 int main(void){
+	initRBELib();
 
-	int channel = 0;
-	init_sc();
-	initADC(channel);
+	debugUSARTInit(115200);
 
-	writeToSerial();
+	/** TRY RUNNING THIS ON THE OSCILLOSCOPE */
+
+	DDRBbits._P4 = OUTPUT;
+	PORTD &= ~0X07;
+	DDRD &= 0x00;
+
+	//timer1_init();
+	//volatile unsigned long last = 0;
+	sprintf(buf, "---------------");
+	printToSerial(buf);
+	PINBbits._P4 = 1;
+	_delay_ms(100); //Delay .1 sec
+	sprintf(buf, "%d", PINBbits._P4);
+	printToSerial(buf);
+	PINBbits._P4 = 0;
+	_delay_ms(100);
+	sprintf(buf, "%d", PINBbits._P4);
+	printToSerial(buf);
+
+	/*
+	while(1){
+		sprintf(buf, "%d", PINBbits._P4);
+		//sqWave(0.5);
+		//sprintf(buf, "%d,%d,%d", PIND&1, (PIND&2) >> 1, (PIND&4) >> 2);
+		//last = counter1;
+		printToSerial(buf);
+//		PINBbits._P4 = 0;
+	}
+	 */
 	return 0;
 }
 
-void turnOnLED(){
-	initRBELib();
-	debugUSARTInit(115200);
-	DDRB = 0xFF;
-	while (1){
-		PORTB = 0xFF;
-		_delay_ms(500);
-		PORTB = 0x00;
-		_delay_ms(500);
-	}
-
-}
-
-volatile char buf[50];
-
 void writeToSerial(){
-	initRBELib();
-	debugUSARTInit(115200);
+
 	timer0_init();
-	volatile unsigned short adcval = 0;
-	while (1){
-		update_sc();
-		adcval = getADCval(4);
-		sprintf(buf,"%02d:%02d:%02d;%08u", (sc.hrs), (sc.min), (sc.sec), adcval);
-		printToSerial(buf);
-		_delay_ms(500);
-	}
+	sprintf(buf,"%02d:%02d:%02d;", (sc.hrs), (sc.min), (sc.sec));
+	printToSerial(buf);
+	_delay_ms(500);
 }
 
 
@@ -109,28 +131,6 @@ void printToSerial(char data[]){
 
 }
 
-void blinkTest(){
-	initRBELib();
-	debugUSARTInit(115200);
-
-	//initTimer(0, CTC, 100);
-
-	DDRBbits._P4 = OUTPUT;
-	while(1){
-		PINBbits._P4 = 0;
-		_delay_ms(100);
-		PINBbits._P4 = 1;
-		_delay_ms(100);
-
-
-	}
-}
-
-void sig_gen(int internalDiv, int dutyCylce){
-	((counter0 % (1/internalDiv)) == 0){
-
-	}
-}
 
 void timer0_init(){
 	//cli();
@@ -140,25 +140,54 @@ void timer0_init(){
 	TCCR0A |= (1 << COM0A1); // Configure timer 0 for CTC mode
 
 	TCCR0B |= (1<<CS02) | (1<<CS00); // prescale by 1024 for 18kHz
-	OCR0A = 179; // divide by 180 -1  to get 100 Hz counter
+	OCR0A = 179; // divide by 180 -1  to get 100 Hz count
 
 	//counter0 = 0; // initialize timercount
 	TIMSK0 |= (1 << OCIE0A); // Enable CTC interrupt
 	sei(); // Enable global interrupts
 }
 
-void timer1_init()
-{
-	TCNT1 = 0;
-	TCCR1A |= (1 << WGM01);// set to CTC mode
-	TCCR1A |= (1 << COM0A1); // Configure timer 1 for CTC mode
+void timer1_init(){
+	TCNT2 = 0;
+	TCCR2A |= (1 << WGM21);// set to CTC mode
+	TCCR2A |= (1 << COM2A1); // Configure timer 0 for CTC mode
 
-	TCCR1B |= (1<<CS11) | (1<<CS10); // prescale by 64 for 288kHz
-	OCR1A = 287; // divide by 18 -1  to get 100 kHz counter
+	TCCR2B |= (1<<CS22) | (1<<CS20); // prescale by 1024 for 18kHz
+	OCR2A = 144; // divide by 180 -1  to get 100 Hz count
 
+	// 145/256 = 1k/x => x = 256k/145
 	//counter0 = 0; // initialize timercount
-	TIMSK1 |= (1 << OCIE1A); // Enable CTC interrupt
+	TIMSK2 |= (1 << OCIE2A); // Enable CTC interrupt
+	//TIMSK1 |= (1 << TOIE1); // Enable CTC interrupt
 	sei(); // Enable global interrupts
 }
 
+void readPot(){
+	int channel = 7;
+	init_sc();
+	initADC(channel);
+	timer0_init();
+	while(1){
+		unsigned short adc_val = getADC(channel);
+		printToSerial(buf);
+		float mv = adc_val/1024.0 *5.0;
+		float angle = adc_val/1024.0 *270;
+		sprintf(buf,"%02d:%02d:%02d, %u, %.2f, %.2f",
+				(sc.hrs), (sc.min), (sc.sec),adc_val, mv, angle);
+		printToSerial(buf);
+		_delay_ms(500);
+	}
+}
 
+void sqWave(float dc){
+	if(counter1  < freq_div*dc){
+		PINBbits._P4 = 1;
+	}
+	else{
+		PINBbits._P4 = 0;
+	}
+}
+
+void initFreqPin(){
+	DDRAbits._P5 = OUTPUT;
+}

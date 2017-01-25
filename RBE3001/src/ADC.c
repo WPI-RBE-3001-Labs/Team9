@@ -8,12 +8,13 @@
 #include "RBELib/RBELib.h"
 #include <avr/io.h>
 #include "RBELib/USARTDebug.h"
-#include "ADC.h"
+#include "RBELib/ADC.h"
 
 void initADC(int channel)
 {
 	DDRA &= ~(1<<channel);
 	DIDR0 |= (1 << channel);
+
 	//specify 128kHz sample rate using internal divider
 	ADCSRA |= (1 << ADPS2)| (1<<ADPS1)| (1<<ADPS0);
 
@@ -24,7 +25,7 @@ void initADC(int channel)
 	ADMUX |= channel; //set multiplexer value
 
 	//ADCSRA |= 1 << ADATE; //set auto trigger for source selection (intrpt flag)
-	ADCSRB &= ~((1<<ADTS2)|(1<<ADTS1)|(1<<ADTS0)); // set free running mode
+	ADCSRB &= ~((1<<ADTS2)|(1<<ADTS1)|(1<<ADTS0)); // free running
 
 	ADCSRA |= 1 <<ADEN; //enable ADC
 //	ADCSRA |= 1 <<ADIE; //enable ADC interrupts
@@ -37,7 +38,7 @@ void initADC(int channel)
 //
 //}
 
-unsigned short getADCval(int channel)
+unsigned short getADC(int channel)
 {
 	// Channel select
 	ADMUX &= 0b11100000;
@@ -52,7 +53,7 @@ unsigned short getADCval(int channel)
 }
 
 
-void clear(char channel)
+void clearADC(int channel)
 {
 //	DDRA |= (1 << channel);
 
@@ -66,3 +67,5 @@ void clear(char channel)
 	ADCL = 0;
 	ADC = 0;
 }
+
+void changeADC(int channel){};
