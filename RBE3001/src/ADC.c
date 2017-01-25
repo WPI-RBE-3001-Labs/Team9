@@ -14,6 +14,7 @@ void initADC(int channel)
 {
 	DDRA &= ~(1<<channel);
 	DIDR0 |= (1 << channel);
+
 	//specify 128kHz sample rate using internal divider
 	ADCSRA |= (1 << ADPS2)| (1<<ADPS1)| (1<<ADPS0);
 

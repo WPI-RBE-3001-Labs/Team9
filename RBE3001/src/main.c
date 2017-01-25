@@ -16,12 +16,19 @@ void blinkTest();
 void writeToSerial();
 void turnOnLED();
 void timer0_init();
+void timer1_init();
 void init_sc();
 void printToSerial(char data[]);
+void readPot();
+void sqWave(float dc);
+void initFreqPin();
+
 
 volatile char buf[50];
 
 volatile unsigned long counter0 = 0;
+volatile unsigned long counter1 = 0;
+int freq_div = 1000;
 
 typedef struct {
 	volatile unsigned int sec;
@@ -63,19 +70,45 @@ ISR(TIMER0_COMPA_vect) {
 	update_sc();
 }
 
+ISR(TIMER2_COMPA_vect) {
+	if (counter1 >= freq_div||counter1 < 0){
+		counter1 = 0;
+	}
+	counter1++; // increment our counter
+}
+
 int main(void){
 	initRBELib();
+
 	debugUSARTInit(115200);
-	int channel = 7;
-	init_sc();
-	initADC(channel);
+
+
+	DDRAbits._P5 = OUTPUT;
+
+	timer1_init();
+	//volatile unsigned long last = 0;
 	while(1){
-		unsigned short adc_val = getADC(channel);
-		sprintf(buf, "%d", adc_val);
-		printToSerial(buf);
+		//sprintf(buf, "%d", PINAbits._P5);
+		//sqWave(0.5);
+		PINAbits._P5 = 1;
+		//last = counter1;
+		//printToSerial(buf);
+		//_delay_ms(500);
 	}
 
-	writeToSerial();
+	//	int channel = 7;
+	//	init_sc();
+	//	initADC(channel);
+	//	while(1){
+	//		unsigned short adc_val = getADC(channel);
+	//		sprintf(buf, "%d", adc_val);
+	//		printToSerial(buf);
+	//	}
+	//
+	//	writeToSerial();
+	//	return 0;
+
+	//readPot();
 	return 0;
 }
 
@@ -93,13 +126,10 @@ void turnOnLED(){
 }
 
 
-
 void writeToSerial(){
 
 	timer0_init();
-	volatile unsigned short adcval = 0;
-	sprintf(buf,"%02d:%02d:%02d;%08u", (sc.hrs), (sc.min), (sc.sec), adcval);
-	//adcval = getADCval(4);
+	sprintf(buf,"%02d:%02d:%02d;", (sc.hrs), (sc.min), (sc.sec));
 	printToSerial(buf);
 	_delay_ms(500);
 }
@@ -147,4 +177,48 @@ void timer0_init(){
 	sei(); // Enable global interrupts
 }
 
+void timer1_init(){
+	TCNT2 = 0;
+	TCCR2A |= (1 << WGM21);// set to CTC mode
+	TCCR2A |= (1 << COM2A1); // Configure timer 0 for CTC mode
+
+	TCCR2B |= (1<<CS22) | (1<<CS20); // prescale by 1024 for 18kHz
+	OCR2A = 144; // divide by 180 -1  to get 100 Hz count
+
+	// 145/256 = 1k/x => x = 256k/145
+	//counter0 = 0; // initialize timercount
+	TIMSK2 |= (1 << OCIE2A); // Enable CTC interrupt
+	//TIMSK1 |= (1 << TOIE1); // Enable CTC interrupt
+	sei(); // Enable global interrupts
+}
+
+void readPot(){
+	int channel = 7;
+	init_sc();
+	initADC(channel);
+	timer0_init();
+	while(1){
+		unsigned short adc_val = getADC(channel);
+		printToSerial(buf);
+		float mv = adc_val/1024.0 *5.0;
+		float angle = adc_val/1024.0 *270;
+		sprintf(buf,"%02d:%02d:%02d, %u, %.2f, %.2f",
+				(sc.hrs), (sc.min), (sc.sec),adc_val, mv, angle);
+		printToSerial(buf);
+		_delay_ms(500);
+	}
+}
+
+void sqWave(float dc){
+	if(counter1  < freq_div*dc){
+		PINAbits._P5 = 1;
+	}
+	else{
+		PINAbits._P5 = 0;
+	}
+}
+
+void initFreqPin(){
+	DDRAbits._P5 = OUTPUT;
+}
 
