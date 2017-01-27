@@ -81,18 +81,6 @@ int main(void){
 
 //ollectADC();
 //eadPot();
-	//volatile unsigned long last = 0;
-	//	sprintf(buf, "---------------");
-	//	printToSerial(buf);
-	//	//PINBbits._P4 = 1;
-	//	PORTB |= (1 << PB4);
-	//	_delay_ms(100); //Delay .1 sec
-	//	sprintf(buf, "%d", PINBbits._P4);
-	//	printToSerial(buf);
-	//	PORTB &= ~(1 << PB4);
-	//	_delay_ms(100);
-	//	sprintf(buf, "%d", PINBbits._P4);
-	//	printToSerial(buf);
 //	ADCtimer_init();
 //	volatile unsigned long last = 0;
 //	while(1){
