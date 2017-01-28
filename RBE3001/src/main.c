@@ -74,28 +74,22 @@ int main(void){
 
 	/** TRY RUNNING THIS ON THE OSCILLOSCOPE */
 
-	//DDRBbits._P4 = OUTPUT;
+	/*
 	DDRB |= (1 << PB4);
 	DDRD &= ~((1<<DDD5)|(1<<DDD6)|(1<<DDD7));
 	PORTD |= ((1<<PD5)|(1<<PD6)|(1<<PD7));
-
-//ollectADC();
-//eadPot();
-//	ADCtimer_init();
-//	volatile unsigned long last = 0;
-//	while(1){
-//		sprintf(buf,"%u",counter0-last);
-//		last = counter0;
-//		printToSerial(buf);
-//
-//		_delay_ms(1000);
-//	}
 	buttonSM();
-//	timer2_init();
-//		while(1){
-//			sqWave(0.5);
-//		}
-
+	*/
+	initSPI();
+	unsigned int val = 0;
+	while(1)
+	{
+		setDAC(0,0);
+		setDAC(1, val % 4095);
+		delay(1);
+		val++;
+		if(val < 0) val = 0;
+	}
 	return 0;
 }
 
