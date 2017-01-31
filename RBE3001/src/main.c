@@ -85,14 +85,14 @@ int main(void){
 	printf("--------------\r");
 	int center = 580;
 	while(1){
-//		setDAC(0, 0);
-//		setDAC(1, 0);
-//		setDAC(2, 0);
-//		setDAC(3, 0);
-//		int adcval = getADC(2);
-//		float angle = (adcval - center)/1023.0 * 270;
-//		printf("ADCVAL: %d, Voltage: %0.1f, Angle: %0.1f\r\n", adcval, adcval*5/1023.0, angle);
-//		_delay_ms(100);
+		//		setDAC(0, 0);
+		//		setDAC(1, 0);
+		//		setDAC(2, 0);
+		//		setDAC(3, 0);
+		//		int adcval = getADC(2);
+		//		float angle = (adcval - center)/1023.0 * 270;
+		//		printf("ADCVAL: %d, Voltage: %0.1f, Angle: %0.1f\r\n", adcval, adcval*5/1023.0, angle);
+		//		_delay_ms(100);
 
 		triangle();
 
@@ -110,6 +110,18 @@ void triangle(){
 		setDAC(0, i);
 		setDAC(1, 4095 - i);
 		_delay_ms(1);
+	}
+}
+
+// Signal must be between -1 and 1
+void driveMotor0(float signal){
+	if(signal >= 0){
+		setDAC(0, signal*4096);
+		setDAC(1, 0);
+	}
+	else{
+		setDAC(1, signal*4096);
+		setDAC(0, 0);
 	}
 }
 
