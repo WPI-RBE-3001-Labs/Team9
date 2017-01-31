@@ -7,6 +7,8 @@
 #include "RBELib/RBELib.h"
 #include "RBELib/timer.h"
 #include "RBELib/ADC.h"
+#include "RBELib/DAC.h"
+#include "RBELib/SPI.h"
 #include <avr/io.h>
 #include "RBELib/USARTDebug.h"
 #include <string.h>
@@ -72,14 +74,6 @@ void update_sc(){
 	}
 }
 
-
-ISR(TIMER2_COMPA_vect) {
-	if (counter1 >= freq_div||counter1 < 0){
-		counter1 = 0;
-	}
-	counter1++; // increment our counter
-}
-
 int main(void){
 	initRBELib();
 
@@ -87,75 +81,15 @@ int main(void){
 
 	/** TRY RUNNING THIS ON THE OSCILLOSCOPE */
 
-<<<<<<< HEAD
-	DDRBbits._P4 = OUTPUT;
-	PORTD &= ~0X07;
-	DDRD &= 0x00;
+	initSPI();
 
-	//timer1_init();
-	//volatile unsigned long last = 0;
-	sprintf(buf, "---------------");
-	printToSerial(buf);
-	PINBbits._P4 = 1;
-	_delay_ms(100); //Delay .1 sec
-	sprintf(buf, "%d", PINBbits._P4);
-	printToSerial(buf);
-	PINBbits._P4 = 0;
-	_delay_ms(100);
-	sprintf(buf, "%d", PINBbits._P4);
-	printToSerial(buf);
-
-	/*
 	while(1){
-		sprintf(buf, "%d", PINBbits._P4);
-		//sqWave(0.5);
-		//sprintf(buf, "%d,%d,%d", PIND&1, (PIND&2) >> 1, (PIND&4) >> 2);
-		//last = counter1;
-		printToSerial(buf);
-//		PINBbits._P4 = 0;
+		setDAC(0, 4095);
+		setDAC(1, 0);
 	}
-	 */
-=======
-	//DDRBbits._P4 = OUTPUT;
-	DDRB |= (1 << PB4);
-	DDRD &= ~((1<<DDD5)|(1<<DDD6)|(1<<DDD7));
-	PORTD |= ((1<<PD5)|(1<<PD6)|(1<<PD7));
-
-//ollectADC();
-//eadPot();
-	//volatile unsigned long last = 0;
-	//	sprintf(buf, "---------------");
-	//	printToSerial(buf);
-	//	//PINBbits._P4 = 1;
-	//	PORTB |= (1 << PB4);
-	//	_delay_ms(100); //Delay .1 sec
-	//	sprintf(buf, "%d", PINBbits._P4);
-	//	printToSerial(buf);
-	//	PORTB &= ~(1 << PB4);
-	//	_delay_ms(100);
-	//	sprintf(buf, "%d", PINBbits._P4);
-	//	printToSerial(buf);
-//	ADCtimer_init();
-//	volatile unsigned long last = 0;
-//	while(1){
-//		sprintf(buf,"%u",counter0-last);
-//		last = counter0;
-//		printToSerial(buf);
-//
-//		_delay_ms(1000);
-//	}
-	buttonSM();
-//	timer2_init();
-//		while(1){
-//			sqWave(0.5);
-//		}
-
->>>>>>> branch 'master' of https://github.com/kpuczydlowski/RBE3001.git
 	return 0;
 }
 
-<<<<<<< HEAD
-=======
 void collectADC()
 {
 	DDRD &= ~((1<<DDD4));
@@ -184,7 +118,6 @@ void collectADC()
 
 }
 
->>>>>>> branch 'master' of https://github.com/kpuczydlowski/RBE3001.git
 void writeToSerial(){
 
 	timer0_init();
@@ -202,15 +135,16 @@ void printToSerial(char data[]){
 	putCharDebug('\n');
 	putCharDebug('\r');
 
-<<<<<<< HEAD
-=======
 }
 
 void buttonSM() {
 	char state = 0;
+	DDRBbits._P4 = OUTPUT;
+	PORTD &= ~0X07;
+	DDRD &= 0x00;
 	init_sc();
 	initADC(channel);
-//	timer0_init();
+	//	timer0_init();
 	timer2_init();
 	while(1)
 	{
@@ -295,50 +229,17 @@ ISR(TIMER0_COMPA_vect) {
 	update_sc();
 }
 
-//ISR(TIMER0_COMPA_vect) {
-//	adc_val2 = getADC(channel);
-//	if(timer_started == 1)
-//	{
-//		adcdatas[data_counter] = adc_val2;
-//		data_counter++;
-//	}
-//
-//	if(data_counter >= 225){
-//		data_done = 1;
-//	}
-//}
-
-//ISR(TIMER2_COMPA_vect) {
-//	if (counter0 >= 65535||counter0 < 0){
-//			counter0 = 0;
-//	}
-//	counter0++; // increment our counter
-//	update_sc();
-//
-//	if (counter1 >= freq_div||counter1 < 0){
-//		counter1 = 0;
-//	}
-//	counter1++; // increment our counter
-//}
 
 ISR(TIMER2_COMPA_vect) {
 	if (counter1 >= freq_div||counter1 < 0){
-			counter1 = 0;
+		counter1 = 0;
 	}
 	counter1++; // increment our counter
 }
 
-//ISR(TIMER1_COMPA_vect) {
-//	if (counter1 >= freq_div||counter1 < 0){
-//		counter1 = 0;
-//	}
-//	counter1++; // increment our counter
-//}
-
 
 ISR(ADC_vect){
 	adc_val2 = ADCH;
->>>>>>> branch 'master' of https://github.com/kpuczydlowski/RBE3001.git
 }
 
 
@@ -357,59 +258,13 @@ void timer0_init(){
 	sei(); // Enable global interrupts
 }
 
-<<<<<<< HEAD
-void timer1_init(){
-	TCNT2 = 0;
-	TCCR2A |= (1 << WGM21);// set to CTC mode
-	TCCR2A |= (1 << COM2A1); // Configure timer 0 for CTC mode
 
-	TCCR2B |= (1<<CS22) | (1<<CS20); // prescale by 1024 for 18kHz
-	OCR2A = 144; // divide by 180 -1  to get 100 Hz count
-
-	// 145/256 = 1k/x => x = 256k/145
-	//counter0 = 0; // initialize timercount
-	TIMSK2 |= (1 << OCIE2A); // Enable CTC interrupt
-	//TIMSK1 |= (1 << TOIE1); // Enable CTC interrupt
-	sei(); // Enable global interrupts
-}
-
-void readPot(){
-	int channel = 7;
-	init_sc();
-	initADC(channel);
-	timer0_init();
-	while(1){
-		unsigned short adc_val = getADC(channel);
-		printToSerial(buf);
-		float mv = adc_val/1024.0 *5.0;
-		float angle = adc_val/1024.0 *270;
-		sprintf(buf,"%02d:%02d:%02d, %u, %.2f, %.2f",
-				(sc.hrs), (sc.min), (sc.sec),adc_val, mv, angle);
-		printToSerial(buf);
-		_delay_ms(500);
-	}
-}
-
-void sqWave(float dc){
-	if(counter1  < freq_div*dc){
-		PINBbits._P4 = 1;
-	}
-	else{
-		PINBbits._P4 = 0;
-	}
-}
-
-void initFreqPin(){
-	DDRAbits._P5 = OUTPUT;
-}
-=======
 void ADCtimer_init(){
 	//cli();
 	// Initialize timer count to 0
 	TCNT0 = 0;
 	TCCR0A |= (1 << WGM01);// set to CTC mode
 	TCCR0A |= (1 << COM0A1); // Configure timer 0 for CTC mode
->>>>>>> branch 'master' of https://github.com/kpuczydlowski/RBE3001.git
 
 	TCCR0B |= (1<<CS02) | (1<<CS00); // prescale by 1024 for 18kHz
 	OCR0A = 79; // divide by 180 -1  to get 100 Hz count
