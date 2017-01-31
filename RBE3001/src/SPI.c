@@ -42,9 +42,9 @@ unsigned char spiTransceive(BYTE data)
 {
 	SPDR = data;
 	while(~(SPSR & (1 << SPIF)));
-	unsigned char sr = SPSR; //read these to clear interrupts
-	unsigned char dr = SPDR;
+	unsigned char stat_reg = SPSR; //read these to clear interrupts
+	unsigned char data_reg = SPDR;
 
-	return dr; // return sent data
+	return data_reg; // return sent data
 
 }

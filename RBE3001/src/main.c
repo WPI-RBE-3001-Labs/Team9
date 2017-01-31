@@ -49,6 +49,13 @@ void init_sc(){
 	sc.hrs = 0;
 }
 
+int volts_to_dac(float v)
+{
+	if(v <= 0.0) return 0;
+	if(v >= 7.2) return 4095;
+	return (int) (v * 4096*(1/7.2));
+}
+
 void update_sc(){
 	if((counter0 % 225) == 0){
 		sc.sec++;
@@ -66,6 +73,23 @@ void update_sc(){
 	}
 }
 
+void lab2main()
+{
+	initRBELib();
+
+	debugUSARTInit(115200);
+	initSPI();
+	unsigned int val = 0;
+
+	while(1)
+	{
+		setDAC(0,0);
+		setDAC(1, val % 4095);
+		delay(1);
+		val++;
+		if(val < 0) val = 0;
+	}
+}
 
 int main(void){
 	initRBELib();
