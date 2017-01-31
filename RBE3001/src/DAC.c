@@ -13,7 +13,7 @@
 void setDAC(int DACn, int SPIVal)
 {
 
-	if(SPIVal >= 4096) SPIVal = 4095;
+	if(SPIVal > 4095) SPIVal = 4095;
 	if(SPIVal < 0) SPIVal = 0;
 
 	unsigned long shift = SPIVal;	// store the 16 bit value
@@ -34,6 +34,7 @@ void setDAC(int DACn, int SPIVal)
 	spiTransceive(upper); 	// send upper byte
 
 	PORTD |= (1 << PD4);	//toggle slave select
-	PORTD &= ~(1 << PD4);
-	PORTD |= (1 << PD4);
+//	PORTD &= ~(1 << PD4);
+//	PORTD |= (1 << PD4);
+
 }

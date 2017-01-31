@@ -85,7 +85,7 @@ void lab2main()
 	{
 		setDAC(0,0);
 		setDAC(1, val % 4095);
-		delay(1);
+		_delay_ms(1);
 		val++;
 		if(val < 0) val = 0;
 	}
@@ -106,13 +106,18 @@ int main(void){
 	*/
 	initSPI();
 	unsigned int val = 0;
+	int b = 0;
 	while(1)
 	{
+//		PORTD &= ~(1 << PD4);
 		setDAC(0,0);
-		setDAC(1, val % 4095);
-		delay(1);
-		val++;
-		if(val < 0) val = 0;
+		setDAC(1, val);
+		if(val > 4094)b = 1;
+		if(val < 1)b = 0;
+		if(b ==0)val++;
+		else val--;
+
+//		_delay_ms(5);
 	}
 	return 0;
 }
