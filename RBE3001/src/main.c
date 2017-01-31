@@ -38,7 +38,7 @@ volatile unsigned long counter1 = 0;
 volatile unsigned char timer_started = 0;
 volatile char data_counter = 0;
 volatile char data_done = 0;
-int channel = 7;
+int channel = 2;
 unsigned short adc_val2;
 int freq_div = 100;
 
@@ -80,14 +80,37 @@ int main(void){
 	debugUSARTInit(115200);
 
 	/** TRY RUNNING THIS ON THE OSCILLOSCOPE */
-
+	initADC(2);
 	initSPI();
-
+	printf("--------------\r");
+	int center = 580;
 	while(1){
-		setDAC(0, 4095);
-		setDAC(1, 0);
+//		setDAC(0, 0);
+//		setDAC(1, 0);
+//		setDAC(2, 0);
+//		setDAC(3, 0);
+//		int adcval = getADC(2);
+//		float angle = (adcval - center)/1023.0 * 270;
+//		printf("ADCVAL: %d, Voltage: %0.1f, Angle: %0.1f\r\n", adcval, adcval*5/1023.0, angle);
+//		_delay_ms(100);
+
+		triangle();
+
 	}
 	return 0;
+}
+
+void triangle(){
+	for (int i = 0; i < 4096; i+=10){
+		setDAC(0, i);
+		setDAC(1, 4095 - i);
+		_delay_ms(1);
+	}
+	for (int i = 4095; i >= 0; i-=10){
+		setDAC(0, i);
+		setDAC(1, 4095 - i);
+		_delay_ms(1);
+	}
 }
 
 void collectADC()

@@ -27,15 +27,12 @@ void setDAC(int DACn, int SPIVal)
 	lower = (shift & 0xFF00) >> 8;	// clear the upper byte, shift down 8 bits
 	upper =  (shift & 0x00FF);		// clear lower byte
 
-	PORTD |= (1 << PD4);	//toggle slave select
-	PORTD &= ~(1 << PD4);
-
-	//	PORTD &= ~(1 << PD4);	// slave select
+	PORTD &= ~(1 << PD4); // set slave select to 0
 
 	spiTransceive(c_a);		// send command and address
 	spiTransceive(lower);	// send lower byte
 	spiTransceive(upper); 	// send upper byte
 
-	PORTD |= (1 << PD4);
+	PORTD |= (1 << PD4); // toggle slave select
 
 }
