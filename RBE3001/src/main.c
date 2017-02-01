@@ -78,15 +78,15 @@ void update_sc(){
 	}
 }
 
+
 int main(void){
 	initRBELib();
 
 	debugUSARTInit(115200);
+	buttonSM2();
 
 	/** TRY RUNNING THIS ON THE OSCILLOSCOPE */
-	initADC(2);
-	initSPI();
-	timer0_init();
+
 	printf("--------------\r\n");
 	int center = 580;
 	while(1){
@@ -198,6 +198,87 @@ void printToSerial(char data[]){
 	putCharDebug('\n');
 	putCharDebug('\r');
 
+}
+
+int getCurrent(int val)
+{
+	//return 0;
+	return ((getADC(val)-30) * 4.89) - 2500;
+}
+
+void buttonSM2()
+{
+	int state = 0;
+	initADC(0);
+	initADC(2);
+	initSPI();
+	timer0_init();
+	DDRC &= ~((1 << DDC7)|
+			(1 << DDC5)|
+			(1 << DDC3)|
+			(1 << DDC1));
+	PORTC |= ((1 << DDC7)|
+			(1 << DDC5)|
+			(1 << DDC3)|
+			(1 << DDC1));
+	int degs = 0;
+	while(1)
+	{
+
+
+		int button1 = (PINC>>PC7)&1;
+		int button2 = (PINC>>PC6)&1;
+		int button3 = (PINC>>PC5)&1;
+		int button4 = (PINC>>PC4)&1;
+		if( ((button1)==0) && ((button2)==1) &&((button3)==1) &&((button4)==1) ){
+			state = 1;
+		}
+		if( ((button2)==0) && ((button1)==1) &&((button3)==1) &&((button4)==1)){
+			state = 2;
+		}
+		if( ((button3)==0) && ((button1)==1) &&((button2)==1) &&((button4)==1)){
+			state = 3;
+		}
+		if( ((button4)==0) && ((button1)==1) &&((button2)==1) &&((button3)==1)){
+			state = 4;
+		}
+
+		switch(state){
+		case 1:
+			resetPID();
+			degs = 950;
+			break;
+		case 2:
+			resetPID();
+			degs = 835;
+			break;
+		case 3:
+			resetPID();
+			degs = 735;
+			break;
+		case 4:
+			resetPID();
+			degs = 575;
+			break;
+		default:
+			//state = 0;
+			break;
+		}
+		//printf("Flag: %d\r\n", flag);
+		if ( (flag == 1) & (state > 0)){
+			int adcval = getADC(2);
+			float p = PID(degs, adcval, .6, 0.1, 0.1);
+			int a = 255-((adcval)/1023.0 * 270);
+			int b = (30*(state-1));
+			int c =  getCurrent(0);
+			int d = p*4096;
+			if(d > 4096) d = 4096;
+			if(d < -4096) d = -4096;
+			printf("%d, %d, %d, %d\r\n", a, b, c, d);
+			driveMotor0(p);
+			flag = 0;
+		}
+	}
 }
 
 void buttonSM() {
