@@ -27,7 +27,8 @@ void initFreqPin();
 
 void buttonSM();
 
-int PID(int setpoint, int curr, int kp, int ki, int kd);
+float PID(int setpoint, int curr, float kp, float ki, float kd);
+void driveMotor0(float signal);
 
 volatile char buf[50];
 volatile unsigned short adcdatas[225];
@@ -86,14 +87,15 @@ int main(void){
 	initADC(2);
 	initSPI();
 	timer0_init();
-	printf("--------------\r");
+	printf("--------------\r\n");
 	int center = 580;
 	while(1){
 		printf("Flag: %d\r\n", flag);
-		if (flag){
+		if (flag == 1){
 			int adcval = getADC(2);
-
-			printf("ADCVAL: %d, PID: %d\r\n", adcval, PID(1000, adcval, 1, 0, 0));
+			float p = PID(center, adcval, .5, 0, 0);
+			printf("ADCVAL: %d, PID: %0.2f\r\n", adcval, p);
+			driveMotor0(p);
 			flag = 0;
 		}
 		//		setDAC(0, 0);
@@ -122,17 +124,15 @@ void triangle(){
 	}
 }
 
-int sum = 0;
-int prev = 0;
-int deltat = 0.01;
-int PID(int setpoint, int curr, int kp, int ki, int kd){
-	int error = setpoint - curr;
-	int val = kp * error + ki*sum*deltat + kd * (error - prev) * deltat;
+float sum = 0;
+float prev = 0;
+float deltat = 0.01;
+float PID(int setpoint, int curr, float kp, float ki, float kd){
+	float error = curr - setpoint;
+	float val = kp * error * deltat + ki*sum*deltat + kd * (error - prev) * deltat;
 
 	sum += error;
 	prev = error;
-
-	//printf("PID Value: %d\r\n", val);
 	return val;
 }
 
@@ -148,7 +148,7 @@ void driveMotor0(float signal){
 		setDAC(1, 0);
 	}
 	else{
-		setDAC(1, signal*4096);
+		setDAC(1, -1*signal*4096);
 		setDAC(0, 0);
 	}
 }
