@@ -27,6 +27,8 @@ void initFreqPin();
 
 void buttonSM();
 
+int PID(int setpoint, int curr, int kp, int ki, int kd);
+
 volatile char buf[50];
 volatile unsigned short adcdatas[225];
 volatile unsigned short timedatas[225];
@@ -42,6 +44,7 @@ int channel = 2;
 unsigned short adc_val2;
 int freq_div = 100;
 
+int flag = 0; // flag for timer 0 interrupt
 
 typedef struct {
 	volatile unsigned int sec;
@@ -69,8 +72,8 @@ void update_sc(){
 		sc.min = 0;
 		sc.hrs++;
 	}
-	if(sc.hrs >=23){
 		sc.hrs = 0;
+	if(sc.hrs >=23){
 	}
 }
 
@@ -82,9 +85,17 @@ int main(void){
 	/** TRY RUNNING THIS ON THE OSCILLOSCOPE */
 	initADC(2);
 	initSPI();
+	timer0_init();
 	printf("--------------\r");
 	int center = 580;
 	while(1){
+		printf("Flag: %d\r\n", flag);
+		if (flag){
+			int adcval = getADC(2);
+
+			printf("ADCVAL: %d, PID: %d\r\n", adcval, PID(1000, adcval, 1, 0, 0));
+			flag = 0;
+		}
 		//		setDAC(0, 0);
 		//		setDAC(1, 0);
 		//		setDAC(2, 0);
@@ -93,8 +104,6 @@ int main(void){
 		//		float angle = (adcval - center)/1023.0 * 270;
 		//		printf("ADCVAL: %d, Voltage: %0.1f, Angle: %0.1f\r\n", adcval, adcval*5/1023.0, angle);
 		//		_delay_ms(100);
-
-		triangle();
 
 	}
 	return 0;
@@ -111,6 +120,25 @@ void triangle(){
 		setDAC(1, 4095 - i);
 		_delay_ms(1);
 	}
+}
+
+int sum = 0;
+int prev = 0;
+int deltat = 0.01;
+int PID(int setpoint, int curr, int kp, int ki, int kd){
+	int error = setpoint - curr;
+	int val = kp * error + ki*sum*deltat + kd * (error - prev) * deltat;
+
+	sum += error;
+	prev = error;
+
+	//printf("PID Value: %d\r\n", val);
+	return val;
+}
+
+void resetPID(){
+	sum = 0;
+	prev = 0;
 }
 
 // Signal must be between -1 and 1
@@ -261,6 +289,7 @@ ISR(TIMER0_COMPA_vect) {
 		counter0 = 0;
 	}
 	counter0++; // increment our counter
+	flag = 1;
 	update_sc();
 }
 
