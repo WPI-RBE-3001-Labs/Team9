@@ -32,12 +32,12 @@ void initSPI()
 			(0 <<  DDD0	));
 
 
-//	DDR_SPI = (1<<DD_MOSI)|(1<<DD_SCK);
-
 	PRR &= 	~(1 << PRSPI);	//power reduction settings to enable SPI
 	SPCR = 	(1 << SPE)| 	//enable SPI
 			(1 << MSTR);	//select Master SPI mode
-	//SPSR = 	(1 << SPI2X);	//double SPI speed
+
+	//	SPSR = 	(1 << SPI2X);	//double SPI speed
+
 	PORTD |= (1 << PD4)	;	//chip select is low enable
 }
 
@@ -46,7 +46,9 @@ unsigned char spiTransceive(BYTE data)
 	SPDR = data;
 	while(!(SPSR & (1 << SPIF)));
 	unsigned char stat_reg = SPSR; //read these to clear interrupts
+	unsigned char data_reg = SPDR;
 
-	return SPDR; // return sent data
+	return data_reg; // return sent data
 
 }
+

@@ -7,6 +7,8 @@
 #include "RBELib/RBELib.h"
 #include "RBELib/timer.h"
 #include "RBELib/ADC.h"
+#include "RBELib/DAC.h"
+#include "RBELib/SPI.h"
 #include <avr/io.h>
 #include "RBELib/USARTDebug.h"
 #include <string.h>
@@ -14,26 +16,36 @@
 
 void writeToSerial();
 void timer0_init();
+
 void timer2_init();
+
 void init_sc();
 void printToSerial(char data[]);
 void readPot();
 void sqWave(float dc);
 void initFreqPin();
+
 void buttonSM();
+
+float PID(int setpoint, int curr, float kp, float ki, float kd);
+void driveMotor0(float signal);
 
 volatile char buf[50];
 volatile unsigned short adcdatas[225];
 volatile unsigned short timedatas[225];
 
+
 volatile unsigned long counter0 = 0;
 volatile unsigned long counter1 = 0;
+
 volatile unsigned char timer_started = 0;
 volatile char data_counter = 0;
 volatile char data_done = 0;
-int channel = 7;
+int channel = 2;
 unsigned short adc_val2;
 int freq_div = 100;
+
+int flag = 0; // flag for timer 0 interrupt
 
 typedef struct {
 	volatile unsigned int sec;
@@ -49,13 +61,6 @@ void init_sc(){
 	sc.hrs = 0;
 }
 
-int volts_to_dac(float v)
-{
-	if(v <= 0.0) return 0;
-	if(v >= 7.2) return 4095;
-	return (int) (v * 4096*(1/7.2));
-}
-
 void update_sc(){
 	if((counter0 % 225) == 0){
 		sc.sec++;
@@ -68,26 +73,8 @@ void update_sc(){
 		sc.min = 0;
 		sc.hrs++;
 	}
-	if(sc.hrs >=23){
 		sc.hrs = 0;
-	}
-}
-
-void lab2main()
-{
-	initRBELib();
-
-	debugUSARTInit(115200);
-	initSPI();
-	unsigned int val = 0;
-
-	while(1)
-	{
-		setDAC(0,0);
-		setDAC(1, val % 4095);
-		_delay_ms(1);
-		val++;
-		if(val < 0) val = 0;
+	if(sc.hrs >=23){
 	}
 }
 
@@ -97,29 +84,73 @@ int main(void){
 	debugUSARTInit(115200);
 
 	/** TRY RUNNING THIS ON THE OSCILLOSCOPE */
-
-	/*
-	DDRB |= (1 << PB4);
-	DDRD &= ~((1<<DDD5)|(1<<DDD6)|(1<<DDD7));
-	PORTD |= ((1<<PD5)|(1<<PD6)|(1<<PD7));
-	buttonSM();
-	*/
+	initADC(2);
 	initSPI();
-	unsigned int val = 0;
-	int b = 0;
-	while(1)
-	{
-//		PORTD &= ~(1 << PD4);
-		setDAC(0,0);
-		setDAC(1, val);
-		if(val > 4094)b = 1;
-		if(val < 1)b = 0;
-		if(b ==0)val++;
-		else val--;
+	timer0_init();
+	printf("--------------\r\n");
+	int center = 580;
+	while(1){
+		printf("Flag: %d\r\n", flag);
+		if (flag == 1){
+			int adcval = getADC(2);
+			float p = PID(center, adcval, .5, 0, 0);
+			printf("ADCVAL: %d, PID: %0.2f\r\n", adcval, p);
+			driveMotor0(p);
+			flag = 0;
+		}
+		//		setDAC(0, 0);
+		//		setDAC(1, 0);
+		//		setDAC(2, 0);
+		//		setDAC(3, 0);
+		//		int adcval = getADC(2);
+		//		float angle = (adcval - center)/1023.0 * 270;
+		//		printf("ADCVAL: %d, Voltage: %0.1f, Angle: %0.1f\r\n", adcval, adcval*5/1023.0, angle);
+		//		_delay_ms(100);
 
-//		_delay_ms(5);
 	}
 	return 0;
+}
+
+void triangle(){
+	for (int i = 0; i < 4096; i+=10){
+		setDAC(0, i);
+		setDAC(1, 4095 - i);
+		_delay_ms(1);
+	}
+	for (int i = 4095; i >= 0; i-=10){
+		setDAC(0, i);
+		setDAC(1, 4095 - i);
+		_delay_ms(1);
+	}
+}
+
+float sum = 0;
+float prev = 0;
+float deltat = 0.01;
+float PID(int setpoint, int curr, float kp, float ki, float kd){
+	float error = curr - setpoint;
+	float val = kp * error * deltat + ki*sum*deltat + kd * (error - prev) * deltat;
+
+	sum += error;
+	prev = error;
+	return val;
+}
+
+void resetPID(){
+	sum = 0;
+	prev = 0;
+}
+
+// Signal must be between -1 and 1
+void driveMotor0(float signal){
+	if(signal >= 0){
+		setDAC(0, signal*4096);
+		setDAC(1, 0);
+	}
+	else{
+		setDAC(1, -1*signal*4096);
+		setDAC(0, 0);
+	}
 }
 
 void collectADC()
@@ -171,9 +202,12 @@ void printToSerial(char data[]){
 
 void buttonSM() {
 	char state = 0;
+	DDRBbits._P4 = OUTPUT;
+	PORTD &= ~0X07;
+	DDRD &= 0x00;
 	init_sc();
 	initADC(channel);
-//	timer0_init();
+	//	timer0_init();
 	timer2_init();
 	while(1)
 	{
@@ -255,48 +289,17 @@ ISR(TIMER0_COMPA_vect) {
 		counter0 = 0;
 	}
 	counter0++; // increment our counter
+	flag = 1;
 	update_sc();
 }
 
-//ISR(TIMER0_COMPA_vect) {
-//	adc_val2 = getADC(channel);
-//	if(timer_started == 1)
-//	{
-//		adcdatas[data_counter] = adc_val2;
-//		data_counter++;
-//	}
-//
-//	if(data_counter >= 225){
-//		data_done = 1;
-//	}
-//}
-
-//ISR(TIMER2_COMPA_vect) {
-//	if (counter0 >= 65535||counter0 < 0){
-//			counter0 = 0;
-//	}
-//	counter0++; // increment our counter
-//	update_sc();
-//
-//	if (counter1 >= freq_div||counter1 < 0){
-//		counter1 = 0;
-//	}
-//	counter1++; // increment our counter
-//}
 
 ISR(TIMER2_COMPA_vect) {
 	if (counter1 >= freq_div||counter1 < 0){
-			counter1 = 0;
+		counter1 = 0;
 	}
 	counter1++; // increment our counter
 }
-
-//ISR(TIMER1_COMPA_vect) {
-//	if (counter1 >= freq_div||counter1 < 0){
-//		counter1 = 0;
-//	}
-//	counter1++; // increment our counter
-//}
 
 
 ISR(ADC_vect){
@@ -318,6 +321,7 @@ void timer0_init(){
 	TIMSK0 |= (1 << OCIE0A); // Enable CTC interrupt
 	sei(); // Enable global interrupts
 }
+
 
 void ADCtimer_init(){
 	//cli();
