@@ -26,8 +26,8 @@ void initADC(int channel)
 
 	//ADCSRA |= 1 << ADATE; //set auto trigger for source selection (intrpt flag)
 	//ADCSRB |= ((1<<ADTS2)|(1<<ADTS1)|(1<<ADTS0)); // timer 0 triggered
-	ADCSRB |= ((1<<ADTS1)|(1<<ADTS0)); // timer 0 triggered
-	ADCSRB &= ~(1<<ADTS2);
+	//ADCSRB |= ((1<<ADTS1)|(1<<ADTS0)); // timer 0 triggered
+	ADCSRB &= ~((1<<ADTS2)|(1<<ADTS1)|(1<<ADTS0)); // free running mode
 	ADCSRA |= 1 <<ADEN; //enable ADC
 
 //	ADCSRA |= 1 <<ADIE; //enable ADC interrupts
@@ -42,6 +42,7 @@ void initADC(int channel)
 
 unsigned short getADC(int channel)
 {
+	changeADC(channel);
 	// Channel select
 	ADMUX &= 0b11100000;
 	ADMUX |= channel;
@@ -70,4 +71,7 @@ void clearADC(int channel)
 	ADC = 0;
 }
 
-void changeADC(int channel){};
+void changeADC(int channel){
+//	DDRA &= ~(1<<channel);
+//	DIDR0 |= (1 << channel);
+}

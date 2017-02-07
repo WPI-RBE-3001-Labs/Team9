@@ -14,21 +14,6 @@
 #include <string.h>
 #include "main.h"
 
-void writeToSerial();
-void timer0_init();
-
-void timer2_init();
-
-void init_sc();
-void printToSerial(char data[]);
-void readPot();
-void sqWave(float dc);
-void initFreqPin();
-
-void buttonSM();
-
-float PID(int setpoint, int curr, float kp, float ki, float kd);
-void driveMotor0(float signal);
 
 volatile char buf[50];
 volatile unsigned short adcdatas[225];
@@ -83,32 +68,63 @@ int main(void){
 	initRBELib();
 
 	debugUSARTInit(115200);
-	buttonSM2();
+
 
 	/** TRY RUNNING THIS ON THE OSCILLOSCOPE */
 
-	printf("--------------\r\n");
-	int center = 580;
-	while(1){
-		printf("Flag: %d\r\n", flag);
-		if (flag == 1){
-			int adcval = getADC(2);
-			float p = PID(center, adcval, .5, 0, 0);
-			printf("ADCVAL: %d, PID: %0.2f\r\n", adcval, p);
-			driveMotor0(p);
-			flag = 0;
-		}
-		//		setDAC(0, 0);
-		//		setDAC(1, 0);
-		//		setDAC(2, 0);
-		//		setDAC(3, 0);
-		//		int adcval = getADC(2);
-		//		float angle = (adcval - center)/1023.0 * 270;
-		//		printf("ADCVAL: %d, Voltage: %0.1f, Angle: %0.1f\r\n", adcval, adcval*5/1023.0, angle);
-		//		_delay_ms(100);
+//	printf("--------------\r\n");
+//	int center = 580;
+//	while(1){
+//		printf("Flag: %d\r\n", flag);
+//		if (flag == 1){
+//			int adcval = getADC(2);
+//			float p = PID(center, adcval, .5, 0, 0);
+//			printf("ADCVAL: %d, PID: %0.2f\r\n", adcval, p);
+//			driveMotor0(p);
+//			flag = 0;
+//		}
+//		//		setDAC(0, 0);
+//		//		setDAC(1, 0);
+//		//		setDAC(2, 0);
+//		//		setDAC(3, 0);
+//		//		int adcval = getADC(2);
+//		//		float angle = (adcval - center)/1023.0 * 270;
+//		//		printf("ADCVAL: %d, Voltage: %0.1f, Angle: %0.1f\r\n", adcval, adcval*5/1023.0, angle);
+//		//		_delay_ms(100);
+//
+//	}
 
+	//	buttonSM2();
+
+	/* Lab 2b starts here */
+	Point p;
+	initADC(2);
+	initADC(3);
+
+	while (1){
+		int adcv1 = getADC(3);
+		int adcv2 = getADC(2);
+		float a1 = toRadians(adcv1, 1);
+		float a2 = toRadians(adcv2, 2);
+		getEndPosition(&p, LINK_LENGTH_1, a1, LINK_LENGTH_2, a2);
+		p.x = p.x + LINK_OFFSET;
+		//printf("Angle 1 = %0.1f, Angle 2 = %0.1f, x = %0.1f, y = %0.1f\r\n", a1, a2, p.x, p.y);
+		printf("%0.1f,%0.1f\r\n ", a1, a2);
+		_delay_ms(100);
 	}
+
 	return 0;
+}
+
+void getEndPosition(Point* p, int l1, float a1, int l2, float a2){
+	p->x = l1*cos(a1) + l2*cos(a2 + a1);
+	p->y = l1*sin(a1) + l2*sin(a2 + a1);
+}
+
+float toRadians(int adcval, int link){
+	if (link == 2)
+		return (((adcval)/1024.0 * 240) - 150)*M_PI/180;
+	return (((adcval)/1024.0 * 240) - 140)*M_PI/180;
 }
 
 void triangle(){
@@ -151,42 +167,6 @@ void driveMotor0(float signal){
 		setDAC(1, -1*signal*4096);
 		setDAC(0, 0);
 	}
-}
-
-void collectADC()
-{
-	DDRD &= ~((1<<DDD4));
-	PORTD |= ((1<<PD4));
-	initADC(channel);
-	while((PIND>>PD4)&1 == 1){
-		_delay_ms(5);
-	}
-	timer2_init();
-	ADCtimer_init();
-	volatile unsigned long last = counter0;
-
-	while(counter0 < 225){
-		if(counter0 > last){
-			adcdatas[last] = getADC(channel);
-			timedatas[last] = counter0;
-			last = counter0;
-		}
-	}
-	sprintf(buf, "---------------");
-	printToSerial(buf);
-	for(int i = 0; i < 225; i++){
-		sprintf(buf,"%02d, %02d", timedatas[i], adcdatas[i]);
-		printToSerial(buf);
-	}
-
-}
-
-void writeToSerial(){
-
-	timer0_init();
-	sprintf(buf,"%02d:%02d:%02d;", (sc.hrs), (sc.min), (sc.sec));
-	printToSerial(buf);
-	_delay_ms(500);
 }
 
 
@@ -274,94 +254,11 @@ void buttonSM2()
 			int d = p*4096;
 			if(d > 4096) d = 4096;
 			if(d < -4096) d = -4096;
-			printf("%d, %d, %d, %d\r\n", a, b, c, d);
+			printf("%d, %d, %d, %d, %d\r\n", counter0, a, b, c, d);
 			driveMotor0(p);
 			flag = 0;
 		}
 	}
-}
-
-void buttonSM() {
-	char state = 0;
-	DDRBbits._P4 = OUTPUT;
-	PORTD &= ~0X07;
-	DDRD &= 0x00;
-	init_sc();
-	initADC(channel);
-	//	timer0_init();
-	timer2_init();
-	while(1)
-	{
-		unsigned short adc_val = getADC(channel);
-		int button1 = (PIND>>PD5)&1;
-		int button2 = (PIND>>PD6)&1;
-		int button3 = (PIND>>PD7)&1;
-		float dc = adc_val/1023.0;
-		if( ((button1)==0) && ((button2)==1) &&((button3)==1) ){
-			state = 1;
-		}
-		if( ((button2)==0) && ((button1)==1) &&((button3)==1) ){
-			state = 2;
-		}
-		if( ((button3)==0) && ((button1)==1) &&((button2)==1) ){
-			state = 3;
-		}
-
-
-		switch(state){
-		case 1:
-			freq_div = 10000;
-			break;
-		case 2:
-			freq_div = 500;
-			break;
-		case 3:
-			freq_div = 100;
-			break;
-		default:
-			freq_div = 1000;
-		}
-		sqWave(dc);
-		int freq = 10000/freq_div;
-		int output = 0;
-		if(counter1  < (int) freq_div*dc)
-			output = 1;
-		sprintf(buf, "%.2f, %d, %d, %d",
-				dc, freq, output, adc_val);
-		printToSerial(buf);
-	}
-
-}
-
-
-void readPot(){
-	init_sc();
-	initADC(channel);
-	timer0_init();
-	while(1){
-		unsigned short adc_val = getADC(channel);
-		printToSerial(buf);
-		float mv = adc_val/1023.0 *5.0;
-		float angle = adc_val/1023.0 *270;
-		sprintf(buf,"%02d:%02d:%02d, %u, %.2f, %.2f",
-				(sc.hrs), (sc.min), (sc.sec),adc_val, mv, angle);
-		printToSerial(buf);
-		_delay_ms(500);
-	}
-}
-
-void sqWave(float dc){
-	if(dc > 1.0) dc = 1.0;
-	if(counter1  < (int) freq_div*dc){
-		PORTB |= (1 << PB4);
-	}
-	else{
-		PORTB &= ~(1 << PB4);
-	}
-}
-
-void initFreqPin(){
-	DDRAbits._P5 = OUTPUT;
 }
 
 // isr setup
