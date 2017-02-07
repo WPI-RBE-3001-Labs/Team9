@@ -72,6 +72,6 @@ void clearADC(int channel)
 }
 
 void changeADC(int channel){
-//	DDRA &= ~(1<<channel);
-//	DIDR0 |= (1 << channel);
+	DDRA &= ~(1<<channel);
+	DIDR0 |= (1 << channel);
 }

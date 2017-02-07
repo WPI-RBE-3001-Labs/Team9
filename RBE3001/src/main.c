@@ -58,7 +58,7 @@ void update_sc(){
 		sc.min = 0;
 		sc.hrs++;
 	}
-		sc.hrs = 0;
+	sc.hrs = 0;
 	if(sc.hrs >=23){
 	}
 }
@@ -72,31 +72,184 @@ int main(void){
 
 	/** TRY RUNNING THIS ON THE OSCILLOSCOPE */
 
-//	printf("--------------\r\n");
-//	int center = 580;
-//	while(1){
-//		printf("Flag: %d\r\n", flag);
-//		if (flag == 1){
-//			int adcval = getADC(2);
-//			float p = PID(center, adcval, .5, 0, 0);
-//			printf("ADCVAL: %d, PID: %0.2f\r\n", adcval, p);
-//			driveMotor0(p);
-//			flag = 0;
-//		}
-//		//		setDAC(0, 0);
-//		//		setDAC(1, 0);
-//		//		setDAC(2, 0);
-//		//		setDAC(3, 0);
-//		//		int adcval = getADC(2);
-//		//		float angle = (adcval - center)/1023.0 * 270;
-//		//		printf("ADCVAL: %d, Voltage: %0.1f, Angle: %0.1f\r\n", adcval, adcval*5/1023.0, angle);
-//		//		_delay_ms(100);
-//
-//	}
+	//	printf("--------------\r\n");
+	//	int center = 580;
+	//initADC(2);
+	//	initSPI();
+	//	while(1){
+	//		triangle();
+	//		printf("Flag: %d\r\n", flag);
+	//		if (flag == 1){
+	//			int adcval = getADC(2);
+	//			float p = PID(center, adcval, .5, 0, 0);
+	//			printf("ADCVAL: %d, PID: %0.2f\r\n", adcval, p);
+	//			driveMotor0(p);
+	//			flag = 0;
+	//		}
+	//		//		setDAC(0, 0);
+	//		//		setDAC(1, 0);
+	//		//		setDAC(2, 0);
+	//		//		setDAC(3, 0);
 
-	//	buttonSM2();
+	/* PART 1 OF LAB 2A HERE */
+	//				int adcval = getADC(2);
+	//				float angle = (adcval - 580)/1023.0 * 270;
+	//				printf("ADCVAL: %d, Voltage: %0.1f, Angle: %0.1f\r\n", adcval, adcval*5/1024.0, angle);
+	//				_delay_ms(100);
+
+	//
+	//	}
+
+	//buttonSM2();
 
 	/* Lab 2b starts here */
+	//printForwardPosition();
+	// 410,0 top most position
+	// 300,200
+
+	pointToPoint();
+	//	printf("----------\r\n");
+	//	while (1){
+	//		_delay_ms(1);
+	//		if (flag == 1){
+	//			int c1 = getADC(3);
+	//			int c2 = getADC(2);
+	//			float v1 = PID(toADCValue(angles.x, 1), c1, 1.25, 0.01, 0.25, &pl1);
+	//			float v2 = PID(toADCValue(angles.y, 2), c2, 1.25, 0.01, 0.25, &pl2);
+	//
+	//			driveMotor0(v1);
+	//			driveMotor1(v2);
+	//
+	//			printf("Giving motors: %0.2f, %0.2f %d %d %d %d\r\n", v1, v2, toADCValue(angles.x, 1), toADCValue(angles.y, 2), c1, c2);
+	//			flag = 0;
+	//		}
+	//
+	//	}
+
+	return 0;
+}
+
+void pointToPoint(){
+	int state = 0;
+	initADC(0);
+	initADC(2);
+	initADC(3);
+	initSPI();
+	timer0_init();
+	DDRC &= ~((1 << DDC7)|
+			(1 << DDC5)|
+			(1 << DDC3)|
+			(1 << DDC1));
+	PORTC |= ((1 << DDC7)|
+			(1 << DDC5)|
+			(1 << DDC3)|
+			(1 << DDC1));
+
+	setDAC(0, 0);
+	setDAC(1, 0);
+	setDAC(2, 0);
+	setDAC(3, 0);
+
+	Point desired;
+	desired.x = 410;
+	desired.y = 0;
+	Point angles;
+	getAngles(&desired, &angles);
+	//printf("Angle 1: %0.2f, Angle 2: %0.2f\r\n", angles.x, angles.y);
+	PIDVar pl1;
+	PIDVar pl2;
+	initPIDVar(&pl1);
+	initPIDVar(&pl2);
+	pl1.deltat = 0.001;
+	pl2.deltat = 0.001;
+	while(1)
+	{
+		int button1 = (PINC>>PC7)&1;
+		int button2 = (PINC>>PC6)&1;
+		int button3 = (PINC>>PC5)&1;
+		int button4 = (PINC>>PC4)&1;
+		if( ((button1)==0) && ((button2)==1) &&((button3)==1) &&((button4)==1) ){
+			state = 1;
+		}
+		if( ((button2)==0) && ((button1)==1) &&((button3)==1) &&((button4)==1)){
+			state = 2;
+		}
+		if( ((button3)==0) && ((button1)==1) &&((button2)==1) &&((button4)==1)){
+			state = 3;
+		}
+		if( ((button4)==0) && ((button1)==1) &&((button2)==1) &&((button3)==1)){
+			state = 4;
+		}
+
+		switch(state){
+		case 1:
+			desired.x = 410;
+			desired.y = 0;
+			getAngles(&desired, &angles);
+			initPIDVar(&pl1);
+			initPIDVar(&pl2);
+			break;
+		case 2:
+			desired.x = 100;
+			desired.y = -266;
+			initPIDVar(&pl1);
+			initPIDVar(&pl2);
+			getAngles(&desired, &angles);
+			break;
+		case 3:
+			desired.x = 270;
+			desired.y = 200;
+			initPIDVar(&pl1);
+			initPIDVar(&pl2);
+			getAngles(&desired, &angles);
+			break;
+		case 4:
+			desired.x = 110;
+			desired.y = -200;
+			initPIDVar(&pl1);
+			initPIDVar(&pl2);
+			break;
+		default:
+			//state = 0;
+			break;
+		}
+		if ( (flag == 1) & (state > 0)){
+			getAngles(&desired, &angles);
+			int c1 = getADC(3);
+			int c2 = getADC(2);
+			float v1 = PID(toADCValue(angles.x, 1), c1, KP, KI, KD, &pl1);
+			float v2 = PID(toADCValue(angles.y, 2), c2, KP, KI, KD, &pl2);
+			driveMotor0(v1);
+			driveMotor1(v2);
+			Point p;
+			float a1 = toRadians(c1, 1);
+			float a2 = toRadians(c2, 2);
+			getEndPosition(&p, LINK_LENGTH_1, a1, LINK_LENGTH_2, a2);
+			p.x = p.x + LINK_OFFSET;
+			printf("Current: %0.1f, %0.1f. Desired: %0.1f, %0.1f\r\n", p.x, p.y, desired.x, desired.y);
+			printf("Giving motors: %d %0.2f, %0.2f %d %d %0.1f %0.1f\r\n",
+					state, v1, v2,
+					toADCValue(angles.x, 1), toADCValue(angles.y, 2),
+					angles.x, angles.y);
+			flag = 0;
+		}
+	}
+}
+
+void getAngles(Point* desired, Point* angles){
+	float x = desired->x - LINK_OFFSET;
+	float y = desired->y;
+	float l1 = LINK_LENGTH_1;
+	float l2 = LINK_LENGTH_2;
+	float t1 = (x*x + y*y - l1*l1 - l2*l2)/(2*l1*l2);
+	float a2 = atan2(sqrt(1 - t1*t1), t1);
+
+	float a1 = atan2(y, x)  - atan2(l2*sin(a2), l1 + l2*cos(a2));
+	angles->x = a1;
+	angles->y = a2;
+
+}
+void printForwardPosition(){
 	Point p;
 	initADC(2);
 	initADC(3);
@@ -108,23 +261,32 @@ int main(void){
 		float a2 = toRadians(adcv2, 2);
 		getEndPosition(&p, LINK_LENGTH_1, a1, LINK_LENGTH_2, a2);
 		p.x = p.x + LINK_OFFSET;
-		//printf("Angle 1 = %0.1f, Angle 2 = %0.1f, x = %0.1f, y = %0.1f\r\n", a1, a2, p.x, p.y);
-		printf("%0.1f,%0.1f\r\n ", a1, a2);
+		printf("Angle 1 = %0.1f, Angle 2 = %0.1f, x = %0.1f, y = %0.1f\r\n", a1, a2, p.x, p.y);
+		//printf("%0.2f,%0.2f\r\n ", a1, a2);
+
 		_delay_ms(100);
 	}
-
-	return 0;
 }
-
 void getEndPosition(Point* p, int l1, float a1, int l2, float a2){
 	p->x = l1*cos(a1) + l2*cos(a2 + a1);
 	p->y = l1*sin(a1) + l2*sin(a2 + a1);
 }
-
-float toRadians(int adcval, int link){
+void initPIDVar(PIDVar* p){
+	p->sum = 0;
+	p->prev = 0;
+}
+int toADCValue(float radians, int link){
 	if (link == 2)
-		return (((adcval)/1024.0 * 240) - 150)*M_PI/180;
-	return (((adcval)/1024.0 * 240) - 140)*M_PI/180;
+		return (int)((radians*180/M_PI + 131)*(1024/240));
+	return (int)((radians*180/M_PI + 159)*(1024/240));
+}
+float toDegrees(int adcval, int link){
+	if (link == 2)
+		return (((adcval)/1024.0 * 240) - 131);
+	return (((adcval)/1024.0 * 240) - 159);
+}
+float toRadians(int adcval, int link){
+	return toDegrees(adcval, link)*M_PI/180;
 }
 
 void triangle(){
@@ -140,31 +302,39 @@ void triangle(){
 	}
 }
 
-float sum = 0;
-float prev = 0;
-float deltat = 0.01;
-float PID(int setpoint, int curr, float kp, float ki, float kd){
-	float error = curr - setpoint;
+float PID(int setpoint, int curr, float kp, float ki, float kd, PIDVar* var){
+	float deltat = var->deltat;
+	float sum = var->sum;
+	float prev = var->prev;
+	float error = setpoint - curr;
 	float val = kp * error * deltat + ki*sum*deltat + kd * (error - prev) * deltat;
 
-	sum += error;
-	prev = error;
+	var->sum += error;
+	var->prev = error;
 	return val;
-}
-
-void resetPID(){
-	sum = 0;
-	prev = 0;
 }
 
 // Signal must be between -1 and 1
 void driveMotor0(float signal){
 	if(signal >= 0){
-		setDAC(0, signal*4096);
+		setDAC(2, signal*4096);
+		setDAC(3, 0);
+	}
+	else{
+		setDAC(3, -1*signal*4096);
+		setDAC(2, 0);
+	}
+}
+
+
+void driveMotor1(float signal){
+
+	if(signal < 0){
+		setDAC(0, -1*signal*4096);
 		setDAC(1, 0);
 	}
 	else{
-		setDAC(1, -1*signal*4096);
+		setDAC(1, signal*4096);
 		setDAC(0, 0);
 	}
 }
@@ -202,6 +372,10 @@ void buttonSM2()
 			(1 << DDC3)|
 			(1 << DDC1));
 	int degs = 0;
+	PIDVar pv;
+	pv.sum = 0;
+	pv.deltat = 0.001;
+	pv.prev = 0;
 	while(1)
 	{
 
@@ -225,19 +399,19 @@ void buttonSM2()
 
 		switch(state){
 		case 1:
-			resetPID();
+			initPIDVar(&pv);
 			degs = 950;
 			break;
 		case 2:
-			resetPID();
+			initPIDVar(&pv);
 			degs = 835;
 			break;
 		case 3:
-			resetPID();
+			initPIDVar(&pv);
 			degs = 735;
 			break;
 		case 4:
-			resetPID();
+			initPIDVar(&pv);
 			degs = 575;
 			break;
 		default:
@@ -247,7 +421,7 @@ void buttonSM2()
 		//printf("Flag: %d\r\n", flag);
 		if ( (flag == 1) & (state > 0)){
 			int adcval = getADC(2);
-			float p = PID(degs, adcval, .6, 0.1, 0.1);
+			float p = PID(degs, adcval, .6, 0.1, 0.1, &pv);
 			int a = 255-((adcval)/1023.0 * 270);
 			int b = (30*(state-1));
 			int c =  getCurrent(0);
@@ -268,7 +442,6 @@ ISR(TIMER0_COMPA_vect) {
 	}
 	counter0++; // increment our counter
 	flag = 1;
-	update_sc();
 }
 
 
