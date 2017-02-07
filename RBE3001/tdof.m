@@ -8,6 +8,10 @@ function tdof
    ptitle = 'Serial Data';
    delay = 0.0001;
    
+   theta1 = (-pi/6):0.1:(pi+pi/6);
+   theta2 = (-pi/6):0.1:(pi+pi/6);
+   
+   [theta1, theta2] = meshgrid(theta1, theta2);
    markersize = 16;
    l0 = 1.4;
    l1 = 1.5;
@@ -21,8 +25,10 @@ function tdof
      x2 = l1*cos(a1) + l2*cos(a1+a2);
      y2 = l1*sin(a1) + l2*sin(a1+a2);
    end
-   
-   
+   [x1, y1, x2, y2] = forkin(theta1, theta2, l1, l2);
+   plot(x2, y2,'-mo');
+   while(1)
+   end
    [x1, y1, x2, y2] = forkin(a1-pi/2, a2, l1, l2);
    p = plot(x2,y2,'r.','MarkerSize',markersize);
    
