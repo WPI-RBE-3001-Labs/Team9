@@ -13,6 +13,7 @@
 #include "RBELib/USARTDebug.h"
 #include <string.h>
 #include "main.h"
+#include <math.h>
 
 
 volatile char buf[50];
@@ -86,7 +87,7 @@ int main(void){
 	//			driveMotor0(p);
 	//			flag = 0;
 	//		}
-	//		//		setDAC(0, 0);
+	//setDAC(1, 4096);
 	//		//		setDAC(1, 0);
 	//		//		setDAC(2, 0);
 	//		//		setDAC(3, 0);
@@ -100,14 +101,15 @@ int main(void){
 	//
 	//	}
 
-	//buttonSM2();
+	buttonSM2();
 
 	/* Lab 2b starts here */
 	//printForwardPosition();
+	//triangle1();
 	// 410,0 top most position
 	// 300,200
 
-	pointToPoint();
+	//pointToPoint();
 	//	printf("----------\r\n");
 	//	while (1){
 	//		_delay_ms(1);
@@ -129,13 +131,96 @@ int main(void){
 	return 0;
 }
 
+void triangle1(){
+	setupBoard();
+
+	Point pts[3];
+	pts[0].x = -1.45; pts[0].y = -1.35;
+	pts[1].x = -1.06; pts[1].y = -0.45;
+	pts[2].x = -0.12; pts[2].y = -1.03;
+
+	makeTriangle(pts, 3);
+
+}
+
+void triangle2(){
+	setupBoard();
+
+	Point pts[12];
+	pts[0].x = -0.12; pts[0].y = -1.03;
+	pts[1].x = -0.46; pts[1].y = -1.25;
+
+	pts[2].x = -0.85; pts[2].y = -1.20;
+
+	pts[3].x = -0.9; pts[3].y = -.45;
+
+	pts[4].x = -0.77; pts[4].y = -.5;
+
+	pts[5].x = -0.70; pts[5].y = -0.57;
+
+	pts[6].x = -0.60; pts[6].y = -0.65;
+
+	pts[7].x = -0.50; pts[7].y = -0.75;
+
+	pts[8].x = -0.30; pts[8].y = -0.88;
+	pts[9].x = -0.12; pts[9].y = -1.03;
+
+	makeTriangle(pts, 10);
+
+
+}
+
+void makeTriangle(Point* pts, int numPoints){
+	printf("------\r\n");
+	DDRC &= ~((1 << DDC7));
+	PORTC |= ((1 << DDC7));
+	while ((PINC >> PC7));
+	//printf("Starting!\r\n");
+	for (int i = 0; i < numPoints; i++){
+		Point p = *(pts + i);
+		//printf("Driving to next %0.2f %0.2f\r\n", p.x, p.y);
+		driveTo(&p);
+		//_delay_ms(1000);
+		//counter0 = 0;
+		flag = 0;
+	}
+	//printf("Finished\r\n");
+}
+
+void driveTo(Point* p){
+	PIDVar pv;
+	initPIDVar(&pv);
+
+	PIDVar pv2;
+	initPIDVar(&pv2);
+
+	int c1 = getADC(3);
+	int c2 = getADC(2);
+
+	float pe1 = 2;
+	float pe2 = 2;
+	while (pe1 != 0 || pe2 != 0){
+		if (flag == 1){
+			c1 = getADC(3);
+			c2 = getADC(2);
+			pe1 = (pe1 == 0 ? 0 : PID(toADCValue(p->x, 1), c1, KP, KI, KD, &pv));
+			pe2 = (pe2 == 0 ? 0 : PID(toADCValue(p->y, 2), c2, KP, KI, KD, &pv2));
+			driveMotor0(pe1);
+			driveMotor1(pe2);
+
+			//printf("%d %d -> %d %d \r\n", toADCValue(p->x, 1), toADCValue(p->y, 2), c1, c2);
+			printf("%ld, %0.2f, %0.2f\r\n", counter0, pe1, pe2);
+			flag = 0;
+		}
+		_delay_ms(1);
+	}
+
+}
+
 void pointToPoint(){
 	int state = 0;
 	initADC(0);
-	initADC(2);
-	initADC(3);
-	initSPI();
-	timer0_init();
+	setupBoard();
 	DDRC &= ~((1 << DDC7)|
 			(1 << DDC5)|
 			(1 << DDC3)|
@@ -160,8 +245,6 @@ void pointToPoint(){
 	PIDVar pl2;
 	initPIDVar(&pl1);
 	initPIDVar(&pl2);
-	pl1.deltat = 0.001;
-	pl2.deltat = 0.001;
 	while(1)
 	{
 		int button1 = (PINC>>PC7)&1;
@@ -261,8 +344,8 @@ void printForwardPosition(){
 		float a2 = toRadians(adcv2, 2);
 		getEndPosition(&p, LINK_LENGTH_1, a1, LINK_LENGTH_2, a2);
 		p.x = p.x + LINK_OFFSET;
-		printf("Angle 1 = %0.1f, Angle 2 = %0.1f, x = %0.1f, y = %0.1f\r\n", a1, a2, p.x, p.y);
-		//printf("%0.2f,%0.2f\r\n ", a1, a2);
+		//printf("Angle 1 = %0.2f, Angle 2 = %0.2f, x = %0.1f, y = %0.1f\r\n", a1, a2, p.x, p.y);
+		printf("%0.2f,%0.2f\r\n ", a1, a2);
 
 		_delay_ms(100);
 	}
@@ -274,6 +357,7 @@ void getEndPosition(Point* p, int l1, float a1, int l2, float a2){
 void initPIDVar(PIDVar* p){
 	p->sum = 0;
 	p->prev = 0;
+	p->deltat = 0.01;
 }
 int toADCValue(float radians, int link){
 	if (link == 2)
@@ -307,8 +391,11 @@ float PID(int setpoint, int curr, float kp, float ki, float kd, PIDVar* var){
 	float sum = var->sum;
 	float prev = var->prev;
 	float error = setpoint - curr;
-	float val = kp * error * deltat + ki*sum*deltat + kd * (error - prev) * deltat;
+	if (error <= 10 && error >= -10){
+		return 0;
+	}
 
+	float val = kp * error * deltat + ki*sum*deltat + kd * (error - prev) * deltat;
 	var->sum += error;
 	var->prev = error;
 	return val;
@@ -360,9 +447,7 @@ void buttonSM2()
 {
 	int state = 0;
 	initADC(0);
-	initADC(2);
-	initSPI();
-	timer0_init();
+	setupBoard();
 	DDRC &= ~((1 << DDC7)|
 			(1 << DDC5)|
 			(1 << DDC3)|
@@ -376,6 +461,7 @@ void buttonSM2()
 	pv.sum = 0;
 	pv.deltat = 0.001;
 	pv.prev = 0;
+
 	while(1)
 	{
 
@@ -422,19 +508,30 @@ void buttonSM2()
 		if ( (flag == 1) & (state > 0)){
 			int adcval = getADC(2);
 			float p = PID(degs, adcval, .6, 0.1, 0.1, &pv);
-			int a = 255-((adcval)/1023.0 * 270);
-			int b = (30*(state-1));
+			int a = toDegrees(adcval, 2);
+			int b = (90 - 30*(state-1));
 			int c =  getCurrent(0);
 			int d = p*4096;
 			if(d > 4096) d = 4096;
 			if(d < -4096) d = -4096;
-			printf("%d, %d, %d, %d, %d\r\n", counter0, a, b, c, d);
-			driveMotor0(p);
+			printf("%ld, %d, %d, %d, %d\r\n", counter0, a, b, c, d);
+			driveMotor1(p);
 			flag = 0;
 		}
 	}
 }
 
+void setupBoard(){
+	initSPI();
+	initADC(2);
+	initADC(3);
+	timer0_init();
+
+	setDAC(0, 0);
+	setDAC(1, 0);
+	setDAC(2, 0);
+	setDAC(3, 0);
+}
 // isr setup
 ISR(TIMER0_COMPA_vect) {
 	if (counter0 >= 65535||counter0 < 0){

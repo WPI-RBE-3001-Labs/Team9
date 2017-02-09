@@ -12,8 +12,8 @@
 #define LINK_LENGTH_2 120
 #define LINK_OFFSET 140
 
-#define KP 2
-#define KI 0.5
+#define KP 1.00
+#define KI 0.01
 #define KD 0.5
 #include "adc_custom.h"
 
@@ -47,6 +47,13 @@ int toADCValue(float degrees, int link);
 void initPIDVar(PIDVar* p);
 
 //float PID(int setpoint, int curr, float kp, float ki, float kd);
+void driveTo(Point* p);
+void makeTriangle(Point* pts, int numPoints);
+void triangle1();
+void triangle2();
+
+void setupBoard();
+
 float PID(int setpoint, int curr, float kp, float ki, float kd, PIDVar* var);
 void driveMotor0(float signal);
 void driveMotor1(float signal);
