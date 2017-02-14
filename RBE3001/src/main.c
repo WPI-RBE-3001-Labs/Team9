@@ -14,7 +14,7 @@
 #include <string.h>
 #include "main.h"
 #include <math.h>
-
+#include "RBELib/Periph.h"
 
 volatile char buf[50];
 volatile unsigned short adcdatas[225];
@@ -32,6 +32,8 @@ unsigned short adc_val2;
 int freq_div = 100;
 
 int flag = 0; // flag for timer 0 interrupt
+
+Point home;
 
 typedef struct {
 	volatile unsigned int sec;
@@ -70,65 +72,121 @@ int main(void){
 
 	debugUSARTInit(115200);
 
-
-	/** TRY RUNNING THIS ON THE OSCILLOSCOPE */
-
-	//	printf("--------------\r\n");
-	//	int center = 580;
-	//initADC(2);
-	//	initSPI();
-	//	while(1){
-	//		triangle();
-	//		printf("Flag: %d\r\n", flag);
-	//		if (flag == 1){
-	//			int adcval = getADC(2);
-	//			float p = PID(center, adcval, .5, 0, 0);
-	//			printf("ADCVAL: %d, PID: %0.2f\r\n", adcval, p);
-	//			driveMotor0(p);
-	//			flag = 0;
-	//		}
-	//setDAC(1, 4096);
-	//		//		setDAC(1, 0);
-	//		//		setDAC(2, 0);
-	//		//		setDAC(3, 0);
-
-	/* PART 1 OF LAB 2A HERE */
-	//				int adcval = getADC(2);
-	//				float angle = (adcval - 580)/1023.0 * 270;
-	//				printf("ADCVAL: %d, Voltage: %0.1f, Angle: %0.1f\r\n", adcval, adcval*5/1024.0, angle);
-	//				_delay_ms(100);
-
-	//
-	//	}
-
-	buttonSM2();
-
-	/* Lab 2b starts here */
-	//printForwardPosition();
-	//triangle1();
-	// 410,0 top most position
-	// 300,200
-
-	//pointToPoint();
-	//	printf("----------\r\n");
-	//	while (1){
-	//		_delay_ms(1);
-	//		if (flag == 1){
-	//			int c1 = getADC(3);
-	//			int c2 = getADC(2);
-	//			float v1 = PID(toADCValue(angles.x, 1), c1, 1.25, 0.01, 0.25, &pl1);
-	//			float v2 = PID(toADCValue(angles.y, 2), c2, 1.25, 0.01, 0.25, &pl2);
-	//
-	//			driveMotor0(v1);
-	//			driveMotor1(v2);
-	//
-	//			printf("Giving motors: %0.2f, %0.2f %d %d %d %d\r\n", v1, v2, toADCValue(angles.x, 1), toADCValue(angles.y, 2), c1, c2);
-	//			flag = 0;
-	//		}
-	//
-	//	}
-
+	testEncoders();
 	return 0;
+}
+
+void testSensors(){
+	home.x = 0;//M_PI/2;
+	home.y = 0;
+
+	initSPI();
+	initADC(3);
+	encInit(1);
+	encInit(0);
+	resetEncCount(1);
+	resetEncCount(0);
+
+
+	DDRC &= ~((1 << DDC7)|
+			(1 << DDC6)|
+			(1 << DDC1)|
+			(1 << DDC2));
+	PORTC |= ((1 << DDC7)|
+			(1 << DDC6)|
+			(1 << DDC1)|
+			(1 << DDC2));
+
+	timer0_init();
+	float cnt2mv = 0.80586;
+	float gfcnv = 0.22;
+	int state = 0;
+	float outV = 0;
+	driveTo(&home);
+	_delay_ms(1000);
+	PIDVar pv;
+	initPIDVar(&pv);
+
+	while (1){
+		//Print accel
+		//printf("%0.2f, x: %0.1f y: %0.1f z: %0.1f r\n", cnt2mv, pow(getAccel(0),cnt2mv), pow(getAccel(1),cnt2mv), pow(getAccel(2), cnt2mv));
+
+		//Print Encsb
+		_delay_ms(1);
+		if (flag == 1){
+			int c1 = getADC(3);
+			outV = PID(toADCValue(0, 1), c1, KP, KI, KD, &pv);
+			driveMotor0(0);
+			driveMotor1(0);
+			signed long e1 = encCount(0);
+			float ax = pow(getAccel(0), cnt2mv);
+			float ay = pow(getAccel(1), cnt2mv);
+			float az = pow(getAccel(2), cnt2mv);
+			printf("Time %ld, Enc1: %ld, X: %0.1f, Y: %0.1f, Z: %0.1f, P: %d\r\n", counter0, e1, ax, ay, az, c1);
+			flag = 0;
+		}
+	}
+}
+
+void testEncoders(){
+	initSPI();
+	encInit(1);
+	encInit(0);
+	resetEncCount(1);
+	resetEncCount(0);
+
+	timer0_init();
+	DDRC &= ~((1 << DDC7)|
+			(1 << DDC6)|
+			(1 << DDC1)|
+			(1 << DDC2));
+	PORTC |= ((1 << DDC7)|
+			(1 << DDC6)|
+			(1 << DDC1)|
+			(1 << DDC2));
+
+	float cnt2mv = 0.80586;
+	float gfcnv = 0.22;
+	int state = 0;
+	int outV = 0;
+	printf("Starting\r\n");
+	while (1){
+		//Print accel
+		//printf("%0.2f, x: %0.1f y: %0.1f z: %0.1f\r\n", cnt2mv, pow(getAccel(0),cnt2mv), pow(getAccel(1),cnt2mv), pow(getAccel(2), cnt2mv));
+
+		//Print Encsb
+
+		int button1 = (PINC>>PC7)&1;
+		int button2 = (PINC>>PC6)&1;
+		int button3 = (PINC>>PC1)&1;
+		int button4 = (PINC>>PC2)&1;
+		if( ((button1)==0) && ((button2)==1) &&((button3)==1) &&((button4)==1) ){
+			state = 1;
+		}
+		if( ((button2)==0) && ((button1)==1) &&((button3)==1) &&((button4)==1)){
+			state = 2;
+		}
+		if( ((button3)==0) && ((button1)==1) &&((button2)==1) &&((button4)==1)){
+			state = 3;
+		}
+		if( ((button4)==0) && ((button1)==1) &&((button2)==1) &&((button3)==1)){
+			state = 4;
+		}
+
+		if (flag == 1){
+			outV = (state == 1) ? 0 :
+					(state == 2) ? -3 :
+							(state == 3) ? 3 :
+									(state == 4) ? 6 : 0;
+			driveMotor0(outV/8.0);
+			driveMotor1(0);
+			signed long e1 = encCount(0);
+			_delay_ms(10);
+			signed long e2 = encCount(1);
+			printf("%ld, %ld\r\n",counter0, e1);
+			flag = 0;
+		}
+	}
 }
 
 void triangle1(){
@@ -209,7 +267,7 @@ void driveTo(Point* p){
 			driveMotor1(pe2);
 
 			//printf("%d %d -> %d %d \r\n", toADCValue(p->x, 1), toADCValue(p->y, 2), c1, c2);
-			printf("%ld, %0.2f, %0.2f\r\n", counter0, pe1, pe2);
+			//printf("%ld, %0.2f, %0.2f\r\n", counter0, pe1, pe2);
 			flag = 0;
 		}
 		_delay_ms(1);

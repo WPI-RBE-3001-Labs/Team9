@@ -62,5 +62,7 @@ void getEndPosition(Point* p, int l1, float a1, int l2, float a2);
 void buttonSM2();
 void pointToPoint();
 
+void testEncoders();
+
 
 #endif /* MAIN_H_ */
