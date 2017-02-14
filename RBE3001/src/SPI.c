@@ -22,7 +22,7 @@ void initSPI()
 			(0 <<  DDB1	)|
 			(0 <<  DDB0	));
 
-	DDRD = ((0 << DDD7	)| //CS for accel
+	DDRD = ((1 << DDD7	)| //CS for accel
 			(0 <<  DDD6	)|
 			(0 <<  DDD5	)|
 			(1 <<  DDD4	)| //CS for DAC
@@ -34,11 +34,15 @@ void initSPI()
 
 	PRR &= 	~(1 << PRSPI);	//power reduction settings to enable SPI
 	SPCR = 	(1 << SPE)| 	//enable SPI
-			(1 << MSTR);	//select Master SPI mode
+			(1 << MSTR)|
+			(1 << SPR1)|
+			(1 << SPR0);	//select Master SPI mode
+
 
 	//	SPSR = 	(1 << SPI2X);	//double SPI speed
 
-	PORTD |= (1 << PD4)	;	//chip select is low enable
+	PORTD |= (1 << PD4)|
+			 (1 << PD7);	//chip select is low enable
 }
 
 unsigned char spiTransceive(BYTE data)
