@@ -21,7 +21,7 @@ signed int getAccel(int axis){
 
 	spiTransceive(((1 << 4) | (1 << 3) | axis) << 2);
 
-	result = (spiTransceive(0) << 4); // get last nibble
+	result = (spiTransceive(0) << 4);
 
 	result |= ((spiTransceive(0) >> 4) & 0x0F);
 
